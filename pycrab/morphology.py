@@ -1,8 +1,10 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 """File morphology.py
 
-This module provides classes Morphology, Signature, and NULLAffix, which are 
-used to describe the morphology of a language in pycrab. The highest-level 
+This module provides classes Morphology, Signature, and NULLAffix, which are
+used to describe the morphology of a language in pycrab. The highest-level
 object is the Morphology, which among other attributes has a list of Signature
 objects. A NULLAffix can be part of a list of affixes either in the morphology
 itself or in individual signatures.
@@ -13,17 +15,26 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from collections import Counter
+import collections
+
+__author__ = "Aris Xanthos"
+__copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
+__credits__ = ["John Goldsmith", "Aris Xanthos"]
+__license__ = "GPLv3"
+__version__ = "0.1"
+__maintainer__ = "Aris Xanthos"
+__email__ = "aris dot xanthos at unil dot ch"
+__status__ = "development"
 
 
-class Signature(object):
+class Signature(object):           # pylint: disable=useless-object-inheritance
     """A class for implementing a signature in pycrab.
-    
-    The Signature class that is at the heart of pycrab's morphology 
-    representation and learning procedures. A signature has an "affix side" 
+
+    The Signature class that is at the heart of pycrab's morphology
+    representation and learning procedures. A signature has an "affix side"
     (either "suffix", the default, or "prefix"), as well as a dict of stems and
-    a dict of affixes, each of which has integer counts as values. Stems and 
-    affixes can be initialized either with dicts or with other iterables such 
+    a dict of affixes, each of which has integer counts as values. Stems and
+    affixes can be initialized either with dicts or with other iterables such
     as lists and sets.
 
     Examples:
@@ -43,18 +54,18 @@ class Signature(object):
     Todo:
         * Compute robustness
         * Compute stability_entropy
-        
+
     """
 
     def __init__(self, stems=None, affixes=None, affix_side="suffix"):
         """__init__ method for class Signature.
-        
+
         Args:
-            stems (mapping or iterable, optional): stems associated with this 
-                signature (with counts if arg is a dict). Defaults to empty 
+            stems (mapping or iterable, optional): stems associated with this
+                signature (with counts if arg is a dict). Defaults to empty
                 dict/list.
-            affixes (mapping or iterable, optional): affixes associated with 
-                this signature (with counts if arg is a dict). Defaults to 
+            affixes (mapping or iterable, optional): affixes associated with
+                this signature (with counts if arg is a dict). Defaults to
                 empty dict/list.
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
@@ -63,27 +74,27 @@ class Signature(object):
         self.stems = collections.Counter(stems)
         self.affixes = collections.Counter(affixes)
         self.affix_side = affix_side
-        
+
     @property
     def robustness(self):
         """Returns the robustness of the signature.
-        
-        Robustness is the number of letters saved by a signature, which equals 
+
+        Robustness is the number of letters saved by a signature, which equals
         the sum of the lengths of all words covered by the signature, minus the
         sum of the lengths of stems, minus the sum of the lengths of affixes.
 
-        Returns: 
+        Returns:
             int.
-            
+
         """
         saved_stem_length = len("".join(self.stems)) * (len(self.affixes)-1)
         saved_affix_length = len("".join(self.affixes)) * (len(self.stems)-1)
         return saved_stem_length + saved_affix_length
-        
+
 
 class NULLAffix(str):
     """A class for representing a NULL affix in pycrab.
-    
+
     NULL affixes behave like empty strings in most situations, such as when
     being concatenated with stems or when their length is computed, however
     they can be represented by a predefined string ("NULL") when necessary,
@@ -99,21 +110,19 @@ class NULLAffix(str):
         test NULL
         >>> str(suffix)
         'NULL'
-        
+
     """
-    
-    def __init__(self):
+
+    def __init__(self):                 # pylint: disable=super-init-not-called
         """Initializes an empty string.
-        
-        This method is here to throw an exception if a NULLAffix is initialized
-        with some kind of string (even empty) as argument.
-        
+
+        This method is only here to throw an exception if a NULLAffix is
+        initialized with some kind of string (even empty) as argument.
+
         """
-        super().__init__()
-        
+
     def __str__(self):
-        return("NULL")
-        
+        return "NULL"
+
     def __repr__(self):
         return "'%s'" % self.__str__()
-        

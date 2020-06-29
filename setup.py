@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """ File setup.py
 
@@ -22,6 +23,13 @@ pycrab. If not, see http://www.gnu.org/licenses
 from os import path
 from setuptools import setup
 
+__author__ = "Aris Xanthos"
+__copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
+__credits__ = ["John Goldsmith", "Aris Xanthos"]
+__license__ = "GPLv3"
+__maintainer__ = "Aris Xanthos"
+__email__ = "aris dot xanthos at unil dot ch"
+__status__ = "development"
 __version__ = "0.1"   # file version
 
 NAME = 'pycrab'
