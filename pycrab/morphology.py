@@ -36,7 +36,44 @@ class Morphology(object):
 
     The Morphology class has only one attribute, namely a list of signatures.
     Stems, suffixes, and prefixes are read-only properties computed on the
-    basis of the signatures.
+    basis of the signatures, and so are suffixal and prefixal parses.
+
+    Examples:
+        >>> my_morphology = morphology.Morphology(
+        ...     signatures=[
+        ...         morphology.Signature(
+        ...             stems=["want", "add", "add"],
+        ...             affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+        ...         ),
+        ...         morphology.Signature(
+        ...             stems=["cr", "dr"],
+        ...             affixes=["y", "ied"],
+        ...         ),
+        ...         morphology.Signature(
+        ...             stems=["do", "wind"],
+        ...             affixes=["un", "re"],
+        ...             affix_side="prefix",
+        ...         ),
+        ...         morphology.Signature(
+        ...             stems=["make", "create"],
+        ...             affixes=["re", morphology.NULL_AFFIX],
+        ...             affix_side="prefix",
+        ...         ),
+        ...     ]
+        ... )
+        >>> my_morphology.stems
+        {'want', 'dr', 'add', 'do', 'cr', 'wind', 'create', 'make'}
+        >>> my_morphology.suffixes
+        {NULL, 'ing', 'ed', 'y', 'ied'}
+        >>> my_morphology.prefixes
+        {NULL, 'un', 're'}
+        >>> my_morphology.suffixal_parses
+        {('cr', 'ied'), ('want', NULL), ('dr', 'y'), ('cr', 'y'),
+        ('add', 'ed'), ('dr', 'ied'), ('want', 'ed'), ('add', NULL),
+        ('add', 'ing'), ('want', 'ing')}
+        >>> my_morphology.prefixal_parses
+        {(NULL, 'create'), ('re', 'make'), ('un', 'wind'), ('re', 'do'),
+        ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
     """
 
@@ -60,7 +97,7 @@ class Morphology(object):
         for signature in self.signatures:
             if signature not in other_morphology.signatures:
                 return False
-        return True        
+        return True
 
     def __ne__(self, other_morphology):
         """Tests for morphology inequality"""
@@ -219,10 +256,10 @@ class Morphology(object):
 
         # Extract existing signatures from other type (not rebuilt)...
         not_rebuilt_signatures = [
-            signature for signature in self.signatures 
+            signature for signature in self.signatures
             if signature.affix_side != affix_side
         ]
-        
+
         # Update list of signatures...
         self.signatures = not_rebuilt_signatures + rebuilt_signatures
 
@@ -258,7 +295,8 @@ class Signature(object):
         >>> sig2.robustness
         19
         >>> sig2.parses
-        {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'), ('add', NULL), ('want', 'ed')}
+        {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'),
+        ('add', NULL), ('want', 'ed')}
 
     Todo:
         * Compute stability_entropy
