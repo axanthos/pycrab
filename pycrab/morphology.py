@@ -16,6 +16,7 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import itertools
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -30,62 +31,118 @@ __status__ = "development"
 class Morphology(object):
     """A class for implementing an entire morphology in pycrab.
 
-
-    The Morphology class serves to store all the elements that compose the 
+    The Morphology class serves to store all the elements that compose the
     morphological description of a language in pycrab: signatures, stems,
     suffixes, and prefixes.
-    
+
     """
 
-    def __init__(self, signatures=None, stems=None, suffixes=None, 
+    def __init__(self, signatures=None, stems=None, suffixes=None,
                  prefixes=None):
         """__init__ method for class Morphology.
 
         Args:
-            signatures (set, optional): set of signatures in the morphology. 
+            signatures (set, optional): set of signatures in the morphology.
                 Defaults to empty set.
             stems (dict, optional): dict of stems in the morphology. The value
                 associated with a stem is the signature to which it belongs.
                 Defaults to empty dict.
-            suffixes (set, optional): set of suffixes in the morphology. 
+            suffixes (set, optional): set of suffixes in the morphology.
                 Defaults to empty set.
-            prefixes (set, optional): set of prefixes in the morphology. 
+            prefixes (set, optional): set of prefixes in the morphology.
                 Defaults to empty set.
 
         """
+
         self.signatures = set() if signatures is None else set(signatures)
         self.stems = dict() if stems is None else stems
         self.suffixes = set() if suffixes is None else set(suffixes)
         self.prefixes = set() if prefixes is None else set(prefixes)
 
+    @property
+    def suffixal_parses(self):
+        """Construct a set of parses based on all suffixal signatures.
+
+        Parses are pairs (stem, suffix).
+
+        Args:
+            none.
+
+        Returns:
+            set.
+
+        """
+
+        return self._get_parses()
+
+    @property
+    def prefixal_parses(self):
+        """Construct a set of parses based on all prefixal signatures.
+
+        Parses are pairs (prefix, stem).
+
+        Args:
+            none.
+
+        Returns:
+            set.
+
+        """
+
+        return self._get_parses("prefix")
+
+    def _get_parses(self, affix_side="suffix"):
+        """Construct a set of parses based on all signatures of a given type.
+
+        Parses are pairs (prefix, stem) or (stem, suffix), depending on
+        affix_side arg.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix"..
+
+        Returns:
+            set.
+
+        """
+
+        parses = set()
+        for signature in self.signatures:
+            if signature.affix_side == affix_side:
+                parses.update(parse for parse in signature.parses)
+        return parses
+
 
 class Signature(object):
     """A class for implementing a signature in pycrab.
 
-    The Signature class is at the heart of pycrab's morphology representation 
-    and learning procedures. A signature has an "affix side" (either "suffix", 
-    the default, or "prefix"), as well as a dict of stems and a dict of 
+    The Signature class is at the heart of pycrab's morphology representation
+    and learning procedures. A signature has an "affix side" (either "suffix",
+    the default, or "prefix"), as well as a dict of stems and a dict of
     affixes, each of which has integer counts as values. Stems and affixes can
-    be initialized either with dicts or with other iterables such as lists and 
+    be initialized either with dicts or with other iterables such as lists and
     sets.
 
     Examples:
-        >>> sig = pycrab.Signature(stems=["add"], affixes={"ing": 8, "ed": 6})
+        >>> from pycrab import morphology
+        >>> sig = morphology.Signature(stems=["add"],
+        ...                            affixes={"ing": 8, "ed": 6})
         >>> sig.stems["want"] += 1
         >>> sig.stems["want"] += 1
         >>> sig.stems.update({"play": 2, "guess": 1})
         >>> sig.stems
         {'add': 1, 'want': 2, 'play': 2, 'guess': 1}
-        >>> sig.affixes[NULLAffix()] += 6
+        >>> sig.affixes[morphology.NULLAffix()] += 6
         >>> sig.affixes
         {'ing': 8, 'ed': 6, NULL: 6}
-        >>> sig2  = pycrab.Signature(stems=["want", "want", "add"])
+        >>> sig2 = morphology.Signature(stems=["want", "want", "add"])
         >>> sig2.stems
         {'want': 2, 'add': 1}
-        >>> sig2.suffixes.update({"ing": 1, "ed": 2, NULLAffix()})
+        >>> sig2.affixes.update({"ing": 1, "ed": 2, morphology.NULLAffix(): 1})
         >>> sig2.robustness
         19
-
+        >>> sig2.parses
+        {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'), ('add', NULL), ('want', 'ed')}
 
     Todo:
         * Compute stability_entropy
@@ -125,6 +182,26 @@ class Signature(object):
         saved_stem_length = len("".join(self.stems)) * (len(self.affixes)-1)
         saved_affix_length = len("".join(self.affixes)) * (len(self.stems)-1)
         return saved_stem_length + saved_affix_length
+
+    @property
+    def parses(self):
+        """Construct a set of parses using the signature's stems and affixes.
+
+        Parses are pairs (prefix, stem) or (stem, suffix).
+
+        Args:
+            none.
+
+        Returns:
+            set.
+
+        """
+
+        if self.affix_side == "suffix":
+            pairs = itertools.product(self.stems, self.affixes)
+        else:
+            pairs = itertools.product(self.affixes, self.stems)
+        return set(pair for pair in pairs)
 
 
 class NULLAffix(str):

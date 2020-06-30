@@ -47,9 +47,42 @@ class TestSignature(TestCase):
                          {morphology.NULLAffix(): 1, "ed": 1, "ing": 1})
 
     def test_init_stem_increment(self):
-        self.signature.stems["test"] += 1
-        self.assertEqual(self.signature.stems["test"], 1)
+        signature = morphology.Signature(
+            stems=["want", "add", "add"],
+            affixes=[morphology.NULLAffix(), "ed", "ing"],
+        )
+        signature.stems["test"] += 1
+        self.assertEqual(signature.stems["test"], 1)
 
     def test_init_affix_increment(self):
-        self.signature.affixes["s"] += 1
-        self.assertEqual(self.signature.affixes["s"], 1)
+        signature = morphology.Signature(
+            stems=["want", "add", "add"],
+            affixes=[morphology.NULLAffix(), "ed", "ing"],
+        )
+        signature.affixes["s"] += 1
+        self.assertEqual(signature.affixes["s"], 1)
+
+    def test_suffixal_parses(self):
+        expected_parses = {
+            ("want", morphology.NULLAffix()),
+            ("want", "ed"),
+            ("want", "ing"),
+            ("add", morphology.NULLAffix()),
+            ("add", "ed"),
+            ("add", "ing"),
+        }
+        self.assertEqual(self.signature.parses, expected_parses)
+
+    def test_prefixal_parses(self):
+        signature = morphology.Signature(
+            stems=["do", "wind"],
+            affixes=["un", "re"],
+            affix_side="prefix",
+        )
+        expected_parses = {
+            ("un", "do"),
+            ("re", "do"),
+            ("un", "wind"),
+            ("re", "wind"),
+        }
+        self.assertEqual(signature.parses, expected_parses)
