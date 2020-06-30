@@ -17,13 +17,13 @@ from six import string_types
 
 from pycrab import morphology
 
-__author__ = "Aris Xanthos"
+__author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
 __credits__ = ["John Goldsmith", "Aris Xanthos"]
 __license__ = "GPLv3"
 __version__ = "0.1"
 __maintainer__ = "Aris Xanthos"
-__email__ = "aris dot xanthos at unil dot ch"
+__email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
 
 
@@ -43,3 +43,8 @@ class TestNULLAffix(TestCase):
 
     def test_is_NULL_when_passed_to_str(self):
         self.assertEqual(str(self.suffix), "NULL")
+
+    def test_raises_exception_when_init_with_arg(self):
+        self.assertRaises(TypeError, morphology.NULLAffix, "")
+
+

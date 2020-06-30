@@ -7,28 +7,28 @@ Copyright 2020 Aris Xanthos & John Goldsmith
 
 This file is part of the pycrab python package.
 
-Pycrab is free software: you can redistribute it and/or modify it under 
-the terms of the GNU General Public License as published by the Free Software 
-Foundation, either version 3 of the License, or (at your option) any later 
+Pycrab is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
 version.
 
-Pycrab is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+Pycrab is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with 
+You should have received a copy of the GNU General Public License along with
 pycrab. If not, see http://www.gnu.org/licenses
 """
 
 from os import path
 from setuptools import setup
 
-__author__ = "Aris Xanthos"
+__author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
 __credits__ = ["John Goldsmith", "Aris Xanthos"]
 __license__ = "GPLv3"
 __maintainer__ = "Aris Xanthos"
-__email__ = "aris dot xanthos at unil dot ch"
+__email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
 __version__ = "0.1"   # file version
 

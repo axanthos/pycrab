@@ -15,13 +15,13 @@ from unittest import TestCase
 
 from pycrab import morphology
 
-__author__ = "Aris Xanthos"
+__author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
 __credits__ = ["John Goldsmith", "Aris Xanthos"]
 __license__ = "GPLv3"
 __version__ = "0.1"
 __maintainer__ = "Aris Xanthos"
-__email__ = "aris dot xanthos at unil dot ch"
+__email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
 
 
@@ -35,7 +35,21 @@ class TestSignature(TestCase):
 
     def test_default_affix_side_is_suffix(self):
         self.assertEqual(self.signature.affix_side, "suffix")
-        
+
     def test_compute_robustness(self):
         self.assertEqual(self.signature.robustness, 19)
 
+    def test_init_stems_with_lists(self):
+        self.assertEqual(self.signature.stems, {"want": 1, "add": 2})
+
+    def test_init_affixes_with_lists(self):
+        self.assertEqual(self.signature.affixes,
+                         {morphology.NULLAffix(): 1, "ed": 1, "ing": 1})
+
+    def test_init_stem_increment(self):
+        self.signature.stems["test"] += 1
+        self.assertEqual(self.signature.stems["test"], 1)
+
+    def test_init_affix_increment(self):
+        self.signature.affixes["s"] += 1
+        self.assertEqual(self.signature.affixes["s"], 1)
