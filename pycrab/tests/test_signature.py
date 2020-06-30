@@ -30,7 +30,7 @@ class TestSignature(TestCase):
     def setUp(self):
         self.signature = morphology.Signature(
             stems=["want", "add", "add"],
-            affixes=[morphology.NULLAffix(), "ed", "ing"],
+            affixes=[morphology.NULL_AFFIX, "ed", "ing"],
         )
 
     def test_default_affix_side_is_suffix(self):
@@ -44,12 +44,12 @@ class TestSignature(TestCase):
 
     def test_init_affixes_with_lists(self):
         self.assertEqual(self.signature.affixes,
-                         {morphology.NULLAffix(): 1, "ed": 1, "ing": 1})
+                         {morphology.NULL_AFFIX: 1, "ed": 1, "ing": 1})
 
     def test_init_stem_increment(self):
         signature = morphology.Signature(
             stems=["want", "add", "add"],
-            affixes=[morphology.NULLAffix(), "ed", "ing"],
+            affixes=[morphology.NULL_AFFIX, "ed", "ing"],
         )
         signature.stems["test"] += 1
         self.assertEqual(signature.stems["test"], 1)
@@ -57,17 +57,31 @@ class TestSignature(TestCase):
     def test_init_affix_increment(self):
         signature = morphology.Signature(
             stems=["want", "add", "add"],
-            affixes=[morphology.NULLAffix(), "ed", "ing"],
+            affixes=[morphology.NULL_AFFIX, "ed", "ing"],
         )
         signature.affixes["s"] += 1
         self.assertEqual(signature.affixes["s"], 1)
 
+    def test_signature_equality(self):
+        other_signature = morphology.Signature(
+            stems=["want", "add", "add"],
+            affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+        )
+        self.assertTrue(self.signature == other_signature)
+
+    def test_signature_inequality(self):
+        other_signature = morphology.Signature(
+            stems=["want", "add"],  # One less "add".
+            affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+        )
+        self.assertTrue(self.signature != other_signature)
+
     def test_suffixal_parses(self):
         expected_parses = {
-            ("want", morphology.NULLAffix()),
+            ("want", morphology.NULL_AFFIX),
             ("want", "ed"),
             ("want", "ing"),
-            ("add", morphology.NULLAffix()),
+            ("add", morphology.NULL_AFFIX),
             ("add", "ed"),
             ("add", "ing"),
         }
