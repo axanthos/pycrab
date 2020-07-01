@@ -44,10 +44,8 @@ class TestNULLAffix(TestCase):
     def test_is_empty_when_concatenated(self):
         self.assertEqual("" + self.suffix, "")
 
-    def test_is_NULL_when_passed_to_str(self):
+    def test_is_visible_when_passed_to_str(self):
         self.assertEqual(str(self.suffix), "NULL")
 
     def test_raises_exception_when_init_with_arg(self):
         self.assertRaises(TypeError, null_affix.NULLAffix, "")
-
-

@@ -102,7 +102,7 @@ class TestSignature(TestCase):
         self.assertTrue(self.morphology != other_morphology)
 
     def test_stems(self):
-        expected_stems = {"want", "add", "dr", "cr", 
+        expected_stems = {"want", "add", "dr", "cr",
                           "create", "wind", "make", "do"}
         self.assertEqual(self.morphology.stems, expected_stems)
 
@@ -150,7 +150,7 @@ class TestSignature(TestCase):
                     affixes=["re", morphology.NULL_AFFIX],
                     affix_side="prefix",
                 ),
-            ]      
+            ]
         )
         parses = {
             ("want", morphology.NULL_AFFIX),
@@ -191,7 +191,7 @@ class TestSignature(TestCase):
                     stems=["want", "add"],
                     affixes=[morphology.NULL_AFFIX, "ed", "ing"],
                 ),
-            ]      
+            ]
         )
         parses = {
             ("un", "do"),
@@ -223,4 +223,3 @@ class TestSignature(TestCase):
         )
         existing_morphology.rebuild_signatures(parses, affix_side="prefix")
         self.assertTrue(existing_morphology == expected_morphology)
-

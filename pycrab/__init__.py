@@ -3,7 +3,7 @@
 
 """File __init__.py
 
-This module exports some basic classes so they can be more conveniently 
+This module exports some basic classes so they can be more conveniently
 imported by pycrab client code.
 
 Examples:
@@ -13,7 +13,7 @@ Examples:
     >>> pycrab.Signature()
     <pycrab.morphology.Signature object at 0x000002AB74317E80>
     >>> pycrab.NULL_AFFIX
-    NULL   
+    NULL
 
 """
 
