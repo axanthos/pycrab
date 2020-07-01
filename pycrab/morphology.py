@@ -280,7 +280,7 @@ class Signature(object):
     Examples:
         >>> import pycrab
         >>> sig = pycrab.Signature(stems=["add"],
-        ...                            affixes={"ing": 8, "ed": 6})
+        ...                        affixes={"ing": 8, "ed": 6})
         >>> sig.stems["want"] += 1
         >>> sig.stems["want"] += 1
         >>> sig.stems.update({"play": 2, "guess": 1})
