@@ -40,7 +40,7 @@ class Morphology(object):
 
     Examples:
         >>> import pycrab
-        >>> my_morphology = pycrab.Morphology(
+        >>> morphology = pycrab.Morphology(
         ...     signatures=[
         ...         pycrab.Signature(
         ...             stems=["want", "add", "add"],
@@ -62,17 +62,17 @@ class Morphology(object):
         ...         ),
         ...     ]
         ... )
-        >>> my_morphology.stems
+        >>> morphology.stems
         {'want', 'dr', 'add', 'do', 'cr', 'wind', 'create', 'make'}
-        >>> my_morphology.suffixes
+        >>> morphology.suffixes
         {NULL, 'ing', 'ed', 'y', 'ied'}
-        >>> my_morphology.prefixes
+        >>> morphology.prefixes
         {NULL, 'un', 're'}
-        >>> my_morphology.suffixal_parses
+        >>> morphology.suffixal_parses
         {('cr', 'ied'), ('want', NULL), ('dr', 'y'), ('cr', 'y'),
         ('add', 'ed'), ('dr', 'ied'), ('want', 'ed'), ('add', NULL),
         ('add', 'ing'), ('want', 'ing')}
-        >>> my_morphology.prefixal_parses
+        >>> morphology.prefixal_parses
         {(NULL, 'create'), ('re', 'make'), ('un', 'wind'), ('re', 'do'),
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
