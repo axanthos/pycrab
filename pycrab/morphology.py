@@ -39,24 +39,25 @@ class Morphology(object):
     basis of the signatures, and so are suffixal and prefixal parses.
 
     Examples:
-        >>> my_morphology = morphology.Morphology(
+        >>> import pycrab
+        >>> my_morphology = pycrab.Morphology(
         ...     signatures=[
-        ...         morphology.Signature(
+        ...         pycrab.Signature(
         ...             stems=["want", "add", "add"],
-        ...             affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+        ...             affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
         ...         ),
-        ...         morphology.Signature(
+        ...         pycrab.Signature(
         ...             stems=["cr", "dr"],
         ...             affixes=["y", "ied"],
         ...         ),
-        ...         morphology.Signature(
+        ...         pycrab.Signature(
         ...             stems=["do", "wind"],
         ...             affixes=["un", "re"],
         ...             affix_side="prefix",
         ...         ),
-        ...         morphology.Signature(
+        ...         pycrab.Signature(
         ...             stems=["make", "create"],
-        ...             affixes=["re", morphology.NULL_AFFIX],
+        ...             affixes=["re", pycrab.NULL_AFFIX],
         ...             affix_side="prefix",
         ...         ),
         ...     ]
@@ -277,21 +278,21 @@ class Signature(object):
     sets.
 
     Examples:
-        >>> from pycrab import morphology
-        >>> sig = morphology.Signature(stems=["add"],
+        >>> import pycrab
+        >>> sig = pycrab.Signature(stems=["add"],
         ...                            affixes={"ing": 8, "ed": 6})
         >>> sig.stems["want"] += 1
         >>> sig.stems["want"] += 1
         >>> sig.stems.update({"play": 2, "guess": 1})
         >>> sig.stems
         {'add': 1, 'want': 2, 'play': 2, 'guess': 1}
-        >>> sig.affixes[morphology.NULL_AFFIX] += 6
+        >>> sig.affixes[pycrab.NULL_AFFIX] += 6
         >>> sig.affixes
         {'ing': 8, 'ed': 6, NULL: 6}
-        >>> sig2 = morphology.Signature(stems=["want", "want", "add"])
+        >>> sig2 = pycrab.Signature(stems=["want", "want", "add"])
         >>> sig2.stems
         {'want': 2, 'add': 1}
-        >>> sig2.affixes.update({"ing": 1, "ed": 2, morphology.NULL_AFFIX: 1})
+        >>> sig2.affixes.update({"ing": 1, "ed": 2, pycrab.NULL_AFFIX: 1})
         >>> sig2.robustness
         19
         >>> sig2.parses
