@@ -3,11 +3,9 @@
 
 """File morphology.py
 
-This module provides classes Morphology, Signature, and NULLAffix, which are
-used to describe the morphology of a language in pycrab. The highest-level
-object is the Morphology, which among other attributes has a list of Signature
-objects. A NULLAffix can be part of a list of affixes either in the morphology
-itself or in individual signatures.
+This module provides classes Morphology and Signature, which are used to
+describe the morphology of a language in pycrab. The highest-level object is
+the Morphology, which has a set of Signature objects as single attribute.
 
 """
 
@@ -18,6 +16,8 @@ from __future__ import print_function
 import collections
 import itertools
 
+from pycrab.null_affix import NULLAffix
+
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
 __credits__ = ["John Goldsmith", "Aris Xanthos"]
@@ -27,37 +27,145 @@ __maintainer__ = "Aris Xanthos"
 __email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
 
+NULL_AFFIX = NULLAffix()
+"""A module-level constant representing the NULL affix."""
+
 
 class Morphology(object):
     """A class for implementing an entire morphology in pycrab.
 
-    The Morphology class serves to store all the elements that compose the
-    morphological description of a language in pycrab: signatures, stems,
-    suffixes, and prefixes.
+    The Morphology class has only one attribute, namely a list of signatures.
+    Stems, suffixes, and prefixes are read-only properties computed on the
+    basis of the signatures, and so are suffixal and prefixal parses.
+
+    Examples:
+        >>> import pycrab
+        >>> morphology = pycrab.Morphology(
+        ...     signatures=[
+        ...         pycrab.Signature(
+        ...             stems=["want", "add", "add"],
+        ...             affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
+        ...         ),
+        ...         pycrab.Signature(
+        ...             stems=["cr", "dr"],
+        ...             affixes=["y", "ied"],
+        ...         ),
+        ...         pycrab.Signature(
+        ...             stems=["do", "wind"],
+        ...             affixes=["un", "re"],
+        ...             affix_side="prefix",
+        ...         ),
+        ...         pycrab.Signature(
+        ...             stems=["make", "create"],
+        ...             affixes=["re", pycrab.NULL_AFFIX],
+        ...             affix_side="prefix",
+        ...         ),
+        ...     ]
+        ... )
+        >>> morphology.stems
+        {'want', 'dr', 'add', 'do', 'cr', 'wind', 'create', 'make'}
+        >>> morphology.suffixes
+        {NULL, 'ing', 'ed', 'y', 'ied'}
+        >>> morphology.prefixes
+        {NULL, 'un', 're'}
+        >>> morphology.suffixal_parses
+        {('cr', 'ied'), ('want', NULL), ('dr', 'y'), ('cr', 'y'),
+        ('add', 'ed'), ('dr', 'ied'), ('want', 'ed'), ('add', NULL),
+        ('add', 'ing'), ('want', 'ing')}
+        >>> morphology.prefixal_parses
+        {(NULL, 'create'), ('re', 'make'), ('un', 'wind'), ('re', 'do'),
+        ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
     """
 
-    def __init__(self, signatures=None, stems=None, suffixes=None,
-                 prefixes=None):
+    def __init__(self, signatures=None):
         """__init__ method for class Morphology.
 
         Args:
-            signatures (set, optional): set of signatures in the morphology.
-                Defaults to empty set.
-            stems (dict, optional): dict of stems in the morphology. The value
-                associated with a stem is the signature to which it belongs.
-                Defaults to empty dict.
-            suffixes (set, optional): set of suffixes in the morphology.
-                Defaults to empty set.
-            prefixes (set, optional): set of prefixes in the morphology.
-                Defaults to empty set.
+            signatures (list, optional): list of signatures in the morphology.
+                Defaults to empty list.
 
         """
 
-        self.signatures = set() if signatures is None else set(signatures)
-        self.stems = dict() if stems is None else stems
-        self.suffixes = set() if suffixes is None else set(suffixes)
-        self.prefixes = set() if prefixes is None else set(prefixes)
+        self.signatures = list() if signatures is None else signatures
+
+    def __eq__(self, other_morphology):
+        """Tests for morphology equality"""
+        if not isinstance(other_morphology, type(self)):
+            return False
+        if len(other_morphology.signatures) != len(self.signatures):
+            return False
+        for signature in self.signatures:
+            if signature not in other_morphology.signatures:
+                return False
+        return True
+
+    def __ne__(self, other_morphology):
+        """Tests for morphology inequality"""
+        return not self == other_morphology
+
+    @property
+    def stems(self):
+        """Construct a set of stems based on all signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        stems = set()
+        for signature in self.signatures:
+            stems.update(signature.stems)
+        return stems
+
+    @property
+    def suffixes(self):
+        """Construct a set of suffixes based on all suffixal signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        return self._get_affixes()
+
+    @property
+    def prefixes(self):
+        """Construct a set of prefixes based on all prefixal signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        return self._get_affixes(affix_side="prefix")
+
+    def _get_affixes(self, affix_side="suffix"):
+        """Construct a set of affixes based on all signatures of a given type.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of strings.
+
+        """
+
+        affixes = set()
+        for signature in self.signatures:
+            if signature.affix_side == affix_side:
+                affixes.update(signature.affixes)
+        return affixes
 
     @property
     def suffixal_parses(self):
@@ -69,7 +177,7 @@ class Morphology(object):
             none.
 
         Returns:
-            set.
+            set of tuples.
 
         """
 
@@ -85,7 +193,7 @@ class Morphology(object):
             none.
 
         Returns:
-            set.
+            set of tuples.
 
         """
 
@@ -99,18 +207,64 @@ class Morphology(object):
 
         Args:
             affix_side (string, optional): either "suffix" (default) or
-                "prefix"..
+                "prefix".
 
         Returns:
-            set.
+            set of tuples.
 
         """
 
         parses = set()
         for signature in self.signatures:
             if signature.affix_side == affix_side:
-                parses.update(parse for parse in signature.parses)
+                parses.update(signature.parses)
         return parses
+
+    def rebuild_signatures(self, parses, affix_side="suffix"):
+        """Reconstruct all signatures of a given type based on a set of parses.
+
+        Args:
+            parses (set): pairs (prefix, stem) or (stem, suffix), depending on
+                affix_side arg.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            number of signatures constructed (int).
+
+        """
+
+        # List all possible affixes of each stem...
+        affixes = collections.defaultdict(list)
+        if affix_side == "suffix":
+            for stem, suffix in parses:
+                affixes[stem].append(suffix)
+        else:
+            for prefix, stem in parses:
+                affixes[stem].append(prefix)
+
+        # Find all stems associated with each affix list...
+        stem_lists = collections.defaultdict(set)
+        for stem, affixes in affixes.items():
+            stem_lists[tuple(sorted(affixes))].add(stem)
+
+        # Rebuild signatures based on list of stems associated with affixes...
+        rebuilt_signatures = list()
+        for affixes, stems in stem_lists.items():
+            rebuilt_signatures.append(
+                Signature(stems, affixes, affix_side)
+            )
+
+        # Extract existing signatures from other type (not rebuilt)...
+        not_rebuilt_signatures = [
+            signature for signature in self.signatures
+            if signature.affix_side != affix_side
+        ]
+
+        # Update list of signatures...
+        self.signatures = not_rebuilt_signatures + rebuilt_signatures
+
+        return len(rebuilt_signatures)
 
 
 class Signature(object):
@@ -124,25 +278,26 @@ class Signature(object):
     sets.
 
     Examples:
-        >>> from pycrab import morphology
-        >>> sig = morphology.Signature(stems=["add"],
-        ...                            affixes={"ing": 8, "ed": 6})
+        >>> import pycrab
+        >>> sig = pycrab.Signature(stems=["add"],
+        ...                        affixes={"ing": 8, "ed": 6})
         >>> sig.stems["want"] += 1
         >>> sig.stems["want"] += 1
         >>> sig.stems.update({"play": 2, "guess": 1})
         >>> sig.stems
         {'add': 1, 'want': 2, 'play': 2, 'guess': 1}
-        >>> sig.affixes[morphology.NULLAffix()] += 6
+        >>> sig.affixes[pycrab.NULL_AFFIX] += 6
         >>> sig.affixes
         {'ing': 8, 'ed': 6, NULL: 6}
-        >>> sig2 = morphology.Signature(stems=["want", "want", "add"])
+        >>> sig2 = pycrab.Signature(stems=["want", "want", "add"])
         >>> sig2.stems
         {'want': 2, 'add': 1}
-        >>> sig2.affixes.update({"ing": 1, "ed": 2, morphology.NULLAffix(): 1})
+        >>> sig2.affixes.update({"ing": 1, "ed": 2, pycrab.NULL_AFFIX: 1})
         >>> sig2.robustness
         19
         >>> sig2.parses
-        {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'), ('add', NULL), ('want', 'ed')}
+        {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'),
+        ('add', NULL), ('want', 'ed')}
 
     Todo:
         * Compute stability_entropy
@@ -166,6 +321,22 @@ class Signature(object):
         self.stems = collections.Counter(stems)
         self.affixes = collections.Counter(affixes)
         self.affix_side = affix_side
+
+    def __eq__(self, other_signature):
+        """Tests for signature equality"""
+        if not isinstance(other_signature, type(self)):
+            return False
+        if other_signature.affix_side != self.affix_side:
+            return False
+        if other_signature.stems != self.stems:
+            return False
+        if other_signature.affixes != self.affixes:
+            return False
+        return True
+
+    def __ne__(self, other_signature):
+        """Tests for signature inequality"""
+        return not self == other_signature
 
     @property
     def robustness(self):
@@ -193,48 +364,10 @@ class Signature(object):
             none.
 
         Returns:
-            set.
+            set of tuples.
 
         """
 
         if self.affix_side == "suffix":
-            pairs = itertools.product(self.stems, self.affixes)
-        else:
-            pairs = itertools.product(self.affixes, self.stems)
-        return set(pair for pair in pairs)
-
-
-class NULLAffix(str):
-    """A class for representing a NULL affix in pycrab.
-
-    NULL affixes behave like empty strings in most situations, such as when
-    being concatenated with stems or when their length is computed, however
-    they can be represented by a predefined string ("NULL") when necessary,
-    by calling print, str, or repr on them.
-
-    Examples:
-        >>> suffix = NULLAffix()
-        >>> len(suffix)
-        0
-        >>> print("test" + suffix)
-        test
-        >>> print("test", suffix)
-        test NULL
-        >>> str(suffix)
-        'NULL'
-
-    """
-
-    def __init__(self):                 # pylint: disable=super-init-not-called
-        """Initializes a NULL affix.
-
-        This method is only here to throw an exception if a NULLAffix is
-        initialized with an argument, in order to ensure it is an empty string.
-
-        """
-
-    def __str__(self):
-        return "NULL"
-
-    def __repr__(self):
-        return self.__str__()
+            return set(itertools.product(self.stems, self.affixes))
+        return set(itertools.product(self.affixes, self.stems))

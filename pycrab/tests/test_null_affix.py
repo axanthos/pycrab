@@ -15,7 +15,7 @@ from unittest import TestCase
 
 from six import string_types
 
-from pycrab import morphology
+from pycrab import null_affix
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -30,10 +30,13 @@ __status__ = "development"
 class TestNULLAffix(TestCase):
 
     def setUp(self):
-        self.suffix = morphology.NULLAffix()
+        self.suffix = null_affix.NULLAffix()
 
     def test_is_string(self):
         self.assertTrue(isinstance(self.suffix, string_types))
+
+    def test_is_singleton(self):
+        self.assertTrue(self.suffix is null_affix.NULLAffix())
 
     def test_has_zero_length(self):
         self.assertEqual(len(self.suffix), 0)
@@ -41,10 +44,8 @@ class TestNULLAffix(TestCase):
     def test_is_empty_when_concatenated(self):
         self.assertEqual("" + self.suffix, "")
 
-    def test_is_NULL_when_passed_to_str(self):
+    def test_is_visible_when_passed_to_str(self):
         self.assertEqual(str(self.suffix), "NULL")
 
     def test_raises_exception_when_init_with_arg(self):
-        self.assertRaises(TypeError, morphology.NULLAffix, "")
-
-
+        self.assertRaises(TypeError, null_affix.NULLAffix, "")
