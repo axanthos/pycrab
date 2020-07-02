@@ -84,6 +84,9 @@ class Morphology(object):
         {(NULL, 'create'), ('re', 'make'), ('un', 'wind'), ('re', 'do'),
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
+    Todo:
+        - add min_stem_length constraint? in build_signatures?
+
     """
 
     def __init__(self, suffixal_signatures=None, prefixal_signatures=None):
