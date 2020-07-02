@@ -28,7 +28,10 @@ __email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
 
 NULL_AFFIX = NULLAffix()
-"""A module-level constant representing the NULL affix."""
+"""Module-level constant representing the NULL affix."""
+
+MIN_NUM_STEMS = 2
+"""Module-level constant for the min number of stems in a signature."""
 
 
 class Morphology(object):
@@ -105,11 +108,11 @@ class Morphology(object):
         """Tests for morphology equality"""
         if not isinstance(other_morphology, type(self)):
             return False
-        if (len(other_morphology.suffixal_signatures) 
-            != len(self.suffixal_signatures)):
+        if (len(other_morphology.suffixal_signatures)
+                != len(self.suffixal_signatures)):
             return False
-        if (len(other_morphology.prefixal_signatures) 
-            != len(self.prefixal_signatures)):
+        if (len(other_morphology.prefixal_signatures)
+                != len(self.prefixal_signatures)):
             return False
         for signature in self.suffixal_signatures:
             if signature not in other_morphology.suffixal_signatures:
@@ -245,7 +248,8 @@ class Morphology(object):
             parses.update(signature.parses)
         return parses
 
-    def build_signatures(self, parses, affix_side="suffix"):
+    def build_signatures(self, parses, affix_side="suffix",
+                         min_num_stems=MIN_NUM_STEMS):
         """Construct all signatures of a given type based on a set of parses.
 
         Args:
@@ -253,6 +257,8 @@ class Morphology(object):
                 affix_side arg.
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
+            min_num_stems (int, optional): minimum number of stems required in
+                a signature (default is MIN_NUM_STEMS).
 
         Returns:
             number of signatures constructed (int).
@@ -276,9 +282,8 @@ class Morphology(object):
         # Build signatures based on sets of stems associated with affixes...
         signatures = list()
         for affixes, stems in stem_sets.items():
-            signatures.append(
-                Signature(stems, affixes, affix_side)
-            )
+            if len(stems) >= min_num_stems:     # Require min number of stems.
+                signatures.append(Signature(stems, affixes, affix_side))
 
         # Update list of signatures of required type...
         if affix_side == "suffix":

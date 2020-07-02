@@ -161,6 +161,8 @@ class TestSignature(TestCase):
             ("dr", "ied"),
             ("cr", "y"),
             ("cr", "ied"),
+            ("boot", morphology.NULL_AFFIX),    # 'boot' should not be retained
+            ("boot", "s")                       # because min_num_stems=2
         }
         expected_morphology = morphology.Morphology(
             suffixal_signatures=[
@@ -174,7 +176,7 @@ class TestSignature(TestCase):
                 ),
             ],
         )
-        existing_morphology.build_signatures(parses)
+        existing_morphology.build_signatures(parses, min_num_stems=2)
         self.assertTrue(existing_morphology == expected_morphology)
 
     def test_build_prefixal_signatures(self):
@@ -188,6 +190,7 @@ class TestSignature(TestCase):
             ("re", "make"),
             (morphology.NULL_AFFIX, "create"),
             ("re", "create"),
+            ("dis", "able"),    # 'able' should be retained (min_num_stems=1)
         }
         expected_morphology = morphology.Morphology(
             prefixal_signatures=[
@@ -201,7 +204,13 @@ class TestSignature(TestCase):
                     affixes=["re", morphology.NULL_AFFIX],
                     affix_side="prefix",
                 ),
+                morphology.Signature(
+                    stems=["able"],
+                    affixes=["dis"],
+                    affix_side="prefix",
+                ),
             ],
         )
-        existing_morphology.build_signatures(parses, affix_side="prefix")
+        existing_morphology.build_signatures(parses, affix_side="prefix",
+                                             min_num_stems=1)
         self.assertTrue(existing_morphology == expected_morphology)
