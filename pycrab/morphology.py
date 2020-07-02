@@ -15,7 +15,9 @@ from __future__ import print_function
 
 import collections
 import itertools
+import math
 
+import pycrab.utils
 from pycrab.null_affix import NULLAffix
 
 __author__ = "Aris Xanthos and John Goldsmith"
@@ -325,9 +327,8 @@ class Signature(object):
         >>> sig2.parses
         {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'),
         ('add', NULL), ('want', 'ed')}
-
-    Todo:
-        * Compute stability_entropy
+        >>> sig2.get_final_entropy()
+        1.0
 
     """
 
@@ -398,3 +399,24 @@ class Signature(object):
         if self.affix_side == "suffix":
             return set(itertools.product(self.stems, self.affixes))
         return set(itertools.product(self.affixes, self.stems))
+
+    def get_final_entropy(self, num_letters=1):
+        """Compute entropy (in bits) over final stem letter sequences.
+
+        Args:
+            num_letters (int): length of final sequences (defaults to 1).
+
+        Returns:
+            float.
+
+        Raises:
+            ValueError: If signature contains stems shorter than num_letters.
+
+        """
+        for stem in self.stems:
+            if len(stem) < num_letters:
+                raise ValueError("Signature contains stems shorter than "
+                                 "required number of letters for entropy "
+                                 "calculation")
+        counts = collections.Counter(stem[-num_letters] for stem in self.stems)
+        return pycrab.utils.entropy(counts)
