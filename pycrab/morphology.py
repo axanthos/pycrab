@@ -15,7 +15,6 @@ from __future__ import print_function
 
 import collections
 import itertools
-import math
 
 import pycrab.utils
 from pycrab.null_affix import NULLAffix
