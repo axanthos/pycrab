@@ -34,14 +34,15 @@ NULL_AFFIX = NULLAffix()
 class Morphology(object):
     """A class for implementing an entire morphology in pycrab.
 
-    The Morphology class has only one attribute, namely a list of signatures.
-    Stems, suffixes, and prefixes are read-only properties computed on the
-    basis of the signatures, and so are suffixal and prefixal parses.
+    The Morphology class has two attributes, namely a list of suffixal
+    signatures and a list of prefixal signatures. Stems, suffixes, and prefixes
+    are read-only properties computed on the basis of the signatures, and so
+    are suffixal and prefixal parses.
 
     Examples:
         >>> import pycrab
         >>> morphology = pycrab.Morphology(
-        ...     signatures=[
+        ...     suffixal_signatures=[
         ...         pycrab.Signature(
         ...             stems=["want", "add", "add"],
         ...             affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
@@ -50,6 +51,8 @@ class Morphology(object):
         ...             stems=["cr", "dr"],
         ...             affixes=["y", "ied"],
         ...         ),
+        ...     ],
+        ...     prefixal_signatures=[
         ...         pycrab.Signature(
         ...             stems=["do", "wind"],
         ...             affixes=["un", "re"],
@@ -60,7 +63,7 @@ class Morphology(object):
         ...             affixes=["re", pycrab.NULL_AFFIX],
         ...             affix_side="prefix",
         ...         ),
-        ...     ]
+        ...     ],
         ... )
         >>> morphology.stems
         {'want', 'dr', 'add', 'do', 'cr', 'wind', 'create', 'make'}
@@ -78,25 +81,41 @@ class Morphology(object):
 
     """
 
-    def __init__(self, signatures=None):
+    def __init__(self, suffixal_signatures=None, prefixal_signatures=None):
         """__init__ method for class Morphology.
 
         Args:
-            signatures (list, optional): list of signatures in the morphology.
-                Defaults to empty list.
+            suffixal_signatures (list, optional): list of suffixal signatures
+                in the morphology. Defaults to empty list.
+            prefixal_signatures (list, optional): list of prefixal signatures
+                in the morphology. Defaults to empty list.
 
         """
 
-        self.signatures = list() if signatures is None else signatures
+        if suffixal_signatures is None:
+            self.suffixal_signatures = list()
+        else:
+            self.suffixal_signatures = suffixal_signatures
+        if prefixal_signatures is None:
+            self.prefixal_signatures = list()
+        else:
+            self.prefixal_signatures = prefixal_signatures
 
     def __eq__(self, other_morphology):
         """Tests for morphology equality"""
         if not isinstance(other_morphology, type(self)):
             return False
-        if len(other_morphology.signatures) != len(self.signatures):
+        if (len(other_morphology.suffixal_signatures) 
+            != len(self.suffixal_signatures)):
             return False
-        for signature in self.signatures:
-            if signature not in other_morphology.signatures:
+        if (len(other_morphology.prefixal_signatures) 
+            != len(self.prefixal_signatures)):
+            return False
+        for signature in self.suffixal_signatures:
+            if signature not in other_morphology.suffixal_signatures:
+                return False
+        for signature in self.prefixal_signatures:
+            if signature not in other_morphology.prefixal_signatures:
                 return False
         return True
 
@@ -117,7 +136,7 @@ class Morphology(object):
         """
 
         stems = set()
-        for signature in self.signatures:
+        for signature in self.suffixal_signatures + self.prefixal_signatures:
             stems.update(signature.stems)
         return stems
 
@@ -162,9 +181,12 @@ class Morphology(object):
         """
 
         affixes = set()
-        for signature in self.signatures:
-            if signature.affix_side == affix_side:
-                affixes.update(signature.affixes)
+        if affix_side == "suffix":
+            signatures = self.suffixal_signatures
+        else:
+            signatures = self.prefixal_signatures
+        for signature in signatures:
+            affixes.update(signature.affixes)
         return affixes
 
     @property
@@ -197,7 +219,7 @@ class Morphology(object):
 
         """
 
-        return self._get_parses("prefix")
+        return self._get_parses(affix_side="prefix")
 
     def _get_parses(self, affix_side="suffix"):
         """Construct a set of parses based on all signatures of a given type.
@@ -215,13 +237,16 @@ class Morphology(object):
         """
 
         parses = set()
-        for signature in self.signatures:
-            if signature.affix_side == affix_side:
-                parses.update(signature.parses)
+        if affix_side == "suffix":
+            signatures = self.suffixal_signatures
+        else:
+            signatures = self.prefixal_signatures
+        for signature in signatures:
+            parses.update(signature.parses)
         return parses
 
-    def rebuild_signatures(self, parses, affix_side="suffix"):
-        """Reconstruct all signatures of a given type based on a set of parses.
+    def build_signatures(self, parses, affix_side="suffix"):
+        """Construct all signatures of a given type based on a set of parses.
 
         Args:
             parses (set): pairs (prefix, stem) or (stem, suffix), depending on
@@ -235,7 +260,7 @@ class Morphology(object):
         """
 
         # List all possible affixes of each stem...
-        affixes = collections.defaultdict(list)
+        affixes = collections.defaultdict(list) # TODO: set instead of list?
         if affix_side == "suffix":
             for stem, suffix in parses:
                 affixes[stem].append(suffix)
@@ -244,27 +269,24 @@ class Morphology(object):
                 affixes[stem].append(prefix)
 
         # Find all stems associated with each affix list...
-        stem_lists = collections.defaultdict(set)
+        stem_sets = collections.defaultdict(set)
         for stem, affixes in affixes.items():
-            stem_lists[tuple(sorted(affixes))].add(stem)
+            stem_sets[tuple(sorted(affixes))].add(stem)
 
-        # Rebuild signatures based on list of stems associated with affixes...
-        rebuilt_signatures = list()
-        for affixes, stems in stem_lists.items():
-            rebuilt_signatures.append(
+        # Build signatures based on sets of stems associated with affixes...
+        signatures = list()
+        for affixes, stems in stem_sets.items():
+            signatures.append(
                 Signature(stems, affixes, affix_side)
             )
 
-        # Extract existing signatures from other type (not rebuilt)...
-        not_rebuilt_signatures = [
-            signature for signature in self.signatures
-            if signature.affix_side != affix_side
-        ]
+        # Update list of signatures of required type...
+        if affix_side == "suffix":
+            self.suffixal_signatures = signatures
+        else:
+            self.prefixal_signatures = signatures
 
-        # Update list of signatures...
-        self.signatures = not_rebuilt_signatures + rebuilt_signatures
-
-        return len(rebuilt_signatures)
+        return len(signatures)
 
 
 class Signature(object):
