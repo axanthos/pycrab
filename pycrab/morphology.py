@@ -13,6 +13,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from builtins import range
 import collections
 import itertools
 
@@ -109,7 +110,7 @@ class Morphology(object):
             self.prefixal_signatures = prefixal_signatures
 
     def __eq__(self, other_morphology):
-        """Tests for morphology equality"""
+        """Tests for morphology equality."""
         if not isinstance(other_morphology, type(self)):
             return False
         if (len(other_morphology.suffixal_signatures)
@@ -127,8 +128,21 @@ class Morphology(object):
         return True
 
     def __ne__(self, other_morphology):
-        """Tests for morphology inequality"""
+        """Tests for morphology inequality."""
         return not self == other_morphology
+
+    def __str__(self):
+        """Formats the morphology for display."""
+
+        lines = list()
+
+        # Suffixal signatures
+        for signature in sorted(self.suffixal_signatures,
+                                key=lambda signature: signature.robustness,
+                                reverse=True):
+            lines.append(str(signature))
+
+        return "\n".join(lines)
 
     @property
     def stems(self):
@@ -331,6 +345,17 @@ class Signature(object):
         ('add', NULL), ('want', 'ed')}
         >>> sig2.get_final_entropy()
         1.0
+        >>> print(sig2)
+        ================================================== NULL=ed=ing
+
+        add     want
+        ------------------------
+        want 2     add  1
+        ------------------------
+
+        Final stem letter entropy: 1.000
+
+        Number of stems: 2
 
     """
 
@@ -353,7 +378,7 @@ class Signature(object):
         self.affix_side = affix_side
 
     def __eq__(self, other_signature):
-        """Tests for signature equality"""
+        """Tests for signature equality."""
         if not isinstance(other_signature, type(self)):
             return False
         if other_signature.affix_side != self.affix_side:
@@ -365,8 +390,52 @@ class Signature(object):
         return True
 
     def __ne__(self, other_signature):
-        """Tests for signature inequality"""
+        """Tests for signature inequality."""
         return not self == other_signature
+
+    def __str__(self):
+        """Formats the signature for display."""
+
+        lines = list()
+
+        # Alphabetical list of affixes...
+        lines.append("=" * 50 + " " +
+                     "=".join(str(affix) for affix in sorted(self.affixes)))
+        lines.append("")
+
+        # Stop here if signature has no stems.
+        if not self.stems:
+            return "\n".join(lines)
+
+        # 6 columns of left-aligned stems in alphabetical order...
+        sorted_stems = sorted(self.stems)
+        col_len = len(max(sorted_stems, key=len))
+        for idx in range(0, len(sorted_stems), 6):
+            lines.append("    ".join(stem + " " * (col_len-len(stem))
+                                     for stem in sorted_stems[idx:idx+6]))
+        lines.append("-" * 24)
+
+        # 3x2 columns of stems+counts in decreasing count order...
+        sorted_stems = sorted(sorted_stems, key=self.stems.get, reverse=True)
+        stem_col_len = len(max(sorted_stems, key=len))
+        count_col_len = len(str(self.stems[sorted_stems[0]])) + 4
+        for idx in range(0, len(sorted_stems), 3):
+            line = list()
+            for stem in sorted_stems[idx:idx+3]:
+                line.append(stem + " " * (stem_col_len-len(stem)))
+                count = str(self.stems[stem])
+                line.append(count + " " * (count_col_len-len(count)))
+            lines.append(" ".join(line))
+        lines.append("-" * 24)
+
+        # Final stem letter entropy...
+        lines.append("\nFinal stem letter entropy: %.3f"
+                     % self.get_final_entropy())
+
+        # Number of stems.
+        lines.append("\nNumber of stems: %i\n" % len(self.stems))
+
+        return "\n".join(lines)
 
     @property
     def robustness(self):
@@ -380,6 +449,7 @@ class Signature(object):
             int.
 
         """
+
         saved_stem_length = len("".join(self.stems)) * (len(self.affixes)-1)
         saved_affix_length = len("".join(self.affixes)) * (len(self.stems)-1)
         return saved_stem_length + saved_affix_length
