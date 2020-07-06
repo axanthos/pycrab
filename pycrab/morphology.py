@@ -142,6 +142,13 @@ class Morphology(object):
                                 reverse=True):
             lines.append(str(signature))
 
+        # Prefixal signatures
+        # TODO: is it ok to simply print suffixal then prefixal sigs?
+        for signature in sorted(self.prefixal_signatures,
+                                key=lambda signature: signature.robustness,
+                                reverse=True):
+            lines.append(str(signature))
+
         return "\n".join(lines)
 
     @property
@@ -311,6 +318,35 @@ class Morphology(object):
 
         return len(signatures)
 
+    def _add_test_signatures(self):
+        """"Add signatures to morphology for testing purposes."""
+        self.suffixal_signatures.append(
+            pycrab.Signature(
+                stems=["want", "add", "add"],
+                affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
+            )
+        )
+        self.suffixal_signatures.append(
+            pycrab.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            )
+        )
+        self.prefixal_signatures.append(
+            pycrab.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            )
+        )
+        self.prefixal_signatures.append(
+            pycrab.Signature(
+                stems=["make", "create"],
+                affixes=["re", pycrab.NULL_AFFIX],
+                affix_side="prefix",
+            )
+        )
+
 
 class Signature(object):
     """A class for implementing a signature in pycrab.
@@ -352,6 +388,9 @@ class Signature(object):
         ------------------------
         want 2     add  1
         ------------------------
+
+            Letters in words if unanalyzed:         31
+                       Letters as analyzed:         12
 
         Final stem letter entropy: 1.000
 
@@ -427,6 +466,13 @@ class Signature(object):
                 line.append(count + " " * (count_col_len-len(count)))
             lines.append(" ".join(line))
         lines.append("-" * 24)
+
+        # Number of letters in words or as analyzed...
+        letters_in_words = sum(len(st)+len(af) for st, af in self.parses)
+        lines.append("\n    Letters in words if unanalyzed: %10i" 
+                     % letters_in_words)
+        lines.append("               Letters as analyzed: %10i" 
+                     % (letters_in_words-self.robustness))
 
         # Final stem letter entropy...
         lines.append("\nFinal stem letter entropy: %.3f"

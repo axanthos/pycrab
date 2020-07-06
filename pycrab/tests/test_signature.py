@@ -110,3 +110,23 @@ class TestSignature(TestCase):
             ("re", "wind"),
         }
         self.assertEqual(signature.parses, expected_parses)
+
+    def test_str(self):
+        signature = morphology.Signature(["want", "want", "add"],
+                                         ["ing", "ed", morphology.NULL_AFFIX])
+        expected_str = (
+            "================================================== NULL=ed=ing\n"
+            "\n"
+            "add     want\n"
+            "------------------------\n"
+            "want 2     add  1    \n"
+            "------------------------\n"
+            "\n"
+            "    Letters in words if unanalyzed:         31\n"
+            "               Letters as analyzed:         12\n"
+            "\n"
+            "Final stem letter entropy: 1.000\n"
+            "\n"
+            "Number of stems: 2\n"
+        )
+        self.assertEqual(str(signature), expected_str)
