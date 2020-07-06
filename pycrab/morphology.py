@@ -143,7 +143,10 @@ class Morphology(object):
             lines.append(str(signature))
 
         # Prefixal signatures
-        # TODO: is it ok to simply print suffixal then prefixal sigs?
+        # TODO: is it ok to simply print suffixal then prefixal sigs? Or do
+        # we rather want to have them all sorted by robustness? In the former
+        # case do we add some kind of title before each type? In the latter 
+        # case do we add some kind of indication of the type of each signature?
         for signature in sorted(self.prefixal_signatures,
                                 key=lambda signature: signature.robustness,
                                 reverse=True):
