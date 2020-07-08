@@ -423,7 +423,7 @@ class Signature(tuple):
         """Read-only accessor for the affixes attribute.
 
         NB: at this point nothing prevents client code from changing the
-        returned counter (e.g. signature.stems["some_stem"] += 1), which
+        returned counter (e.g. signature.affixes["some_affix"] += 1), which
         compromises the objects immutability and the consistency of cached
         properties. TODO: Consider returning a copy?
         """
