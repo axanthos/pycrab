@@ -139,7 +139,6 @@ class Morphology(object):
         # Prefixal signatures
         # TODO: is it ok to simply print suffixal then prefixal sigs? Or do
         # we rather want to have them all sorted by robustness? In the former
-
         # case do we add some kind of title before each type? In the latter
         # case do we add some kind of indication of the type of each signature?
         # => Don't mix, add a header
@@ -411,50 +410,34 @@ class Signature(tuple):
     @property
     def stems(self):
         """Read-only accessor for the stems attribute.
-        
-        NB: at this point nothing prevents client code from changing the 
-        returned counter (e.g. signature.stems["some_stem"] += 1), which 
+
+        NB: at this point nothing prevents client code from changing the
+        returned counter (e.g. signature.stems["some_stem"] += 1), which
         compromises the objects immutability and the consistency of cached
         properties. TODO: Consider returning a copy?
         """
         return tuple.__getitem__(self, 0)
-        
+
     @property
     def affixes(self):
         """Read-only accessor for the affixes attribute.
-        
-        NB: at this point nothing prevents client code from changing the 
-        returned counter (e.g. signature.stems["some_stem"] += 1), which 
+
+        NB: at this point nothing prevents client code from changing the
+        returned counter (e.g. signature.stems["some_stem"] += 1), which
         compromises the objects immutability and the consistency of cached
         properties. TODO: Consider returning a copy?
         """
         return tuple.__getitem__(self, 1)
-        
+
     @property
     def affix_side(self):
         """Read-only accessor for the affix_side attribute."""
         return tuple.__getitem__(self, 2)
-        
-    # def __eq__(self, other_signature):
-        # """Tests for signature equality."""
-        # if not isinstance(other_signature, type(self)):
-            # return False
-        # if other_signature.affix_side != self.affix_side:
-            # return False
-        # if other_signature.stems != self.stems:
-            # return False
-        # if other_signature.affixes != self.affixes:
-            # return False
-        # return True
-
-    # def __ne__(self, other_signature):
-        # """Tests for signature inequality."""
-        # return not self == other_signature
 
     def __hash__(self):
         """Hashing function for signature objects."""
-        return hash(tuple(self.affixes))   
-        
+        return hash(tuple(sorted(self.affixes)))
+
     def __str__(self):
         """Formats the signature for display."""
 
