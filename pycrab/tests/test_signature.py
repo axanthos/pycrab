@@ -39,15 +39,15 @@ class TestSignature(TestCase):
     def test_compute_robustness(self):
         self.assertEqual(self.signature.robustness, 19)
 
-    def test_get_final_entropy(self):
-        self.assertEqual(self.signature.get_final_entropy(), 1.0)
+    def test_get_edge_entropy(self):
+        self.assertEqual(self.signature.get_edge_entropy(), 1.0)
 
-    def test_get_final_entropy_several_letters(self):
-        signature = morphology.Signature(stems=["say", "pray"])
-        self.assertEqual(signature.get_final_entropy(num_letters=3), 1.0)
+    def test_get_edge_entropy_several_letters(self):
+        signature = morphology.Signature(stems=["prey", "pray"])
+        self.assertEqual(signature.get_edge_entropy(num_letters=3), 1.0)
 
-    def test_get_final_entropy_raises_value_error(self):
-        self.assertRaises(ValueError, self.signature.get_final_entropy, 5)
+    def test_get_edge_entropy_raises_value_error(self):
+        self.assertRaises(ValueError, self.signature.get_edge_entropy, 5)
 
     def test_init_stems_with_lists(self):
         self.assertEqual(self.signature.stems, {"want": 1, "add": 2})

@@ -145,8 +145,10 @@ class Morphology(object):
         # Prefixal signatures
         # TODO: is it ok to simply print suffixal then prefixal sigs? Or do
         # we rather want to have them all sorted by robustness? In the former
+        
         # case do we add some kind of title before each type? In the latter 
         # case do we add some kind of indication of the type of each signature?
+        # => Don't mix, add a header
         for signature in sorted(self.prefixal_signatures,
                                 key=lambda signature: signature.robustness,
                                 reverse=True):
@@ -382,7 +384,7 @@ class Signature(object):
         >>> sig2.parses
         {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'),
         ('add', NULL), ('want', 'ed')}
-        >>> sig2.get_final_entropy()
+        >>> sig2.get_edge_entropy()
         1.0
         >>> print(sig2)
         ================================================== NULL=ed=ing
@@ -479,7 +481,7 @@ class Signature(object):
 
         # Final stem letter entropy...
         lines.append("\nFinal stem letter entropy: %.3f"
-                     % self.get_final_entropy())
+                     % self.get_edge_entropy())
 
         # Number of stems.
         lines.append("\nNumber of stems: %i\n" % len(self.stems))
@@ -521,7 +523,7 @@ class Signature(object):
             return set(itertools.product(self.stems, self.affixes))
         return set(itertools.product(self.affixes, self.stems))
 
-    def get_final_entropy(self, num_letters=1):
+    def get_edge_entropy(self, num_letters=1):
         """Compute entropy (in bits) over final stem letter sequences.
 
         Args:
@@ -539,5 +541,5 @@ class Signature(object):
                 raise ValueError("Signature contains stems shorter than "
                                  "required number of letters for entropy "
                                  "calculation")
-        counts = collections.Counter(stem[-num_letters] for stem in self.stems)
+        counts = collections.Counter(stem[-num_letters:] for stem in self.stems)
         return pycrab.utils.entropy(counts)
