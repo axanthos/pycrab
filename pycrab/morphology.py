@@ -17,6 +17,8 @@ from builtins import range
 import collections
 import itertools
 
+from cached_property import cached_property
+
 import pycrab.utils
 from pycrab.null_affix import NULLAffix
 
@@ -39,15 +41,15 @@ MIN_NUM_STEMS = 2
 class Morphology(object):
     """A class for implementing an entire morphology in pycrab.
 
-    The Morphology class has two attributes, namely a list of suffixal
-    signatures and a list of prefixal signatures. Stems, suffixes, and prefixes
+    The Morphology class has two attributes, namely a set of suffixal
+    signatures and a set of prefixal signatures. Stems, suffixes, and prefixes
     are read-only properties computed on the basis of the signatures, and so
     are suffixal and prefixal parses.
 
     Examples:
         >>> import pycrab
         >>> morphology = pycrab.Morphology(
-        ...     suffixal_signatures=[
+        ...     suffixal_signatures={
         ...         pycrab.Signature(
         ...             stems=["want", "add", "add"],
         ...             affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
@@ -56,8 +58,8 @@ class Morphology(object):
         ...             stems=["cr", "dr"],
         ...             affixes=["y", "ied"],
         ...         ),
-        ...     ],
-        ...     prefixal_signatures=[
+        ...     },
+        ...     prefixal_signatures={
         ...         pycrab.Signature(
         ...             stems=["do", "wind"],
         ...             affixes=["un", "re"],
@@ -68,7 +70,7 @@ class Morphology(object):
         ...             affixes=["re", pycrab.NULL_AFFIX],
         ...             affix_side="prefix",
         ...         ),
-        ...     ],
+        ...     },
         ... )
         >>> morphology.stems
         {'want', 'dr', 'add', 'do', 'cr', 'wind', 'create', 'make'}
@@ -101,11 +103,11 @@ class Morphology(object):
         """
 
         if suffixal_signatures is None:
-            self.suffixal_signatures = list()
+            self.suffixal_signatures = set()
         else:
             self.suffixal_signatures = suffixal_signatures
         if prefixal_signatures is None:
-            self.prefixal_signatures = list()
+            self.prefixal_signatures = set()
         else:
             self.prefixal_signatures = prefixal_signatures
 
@@ -113,18 +115,10 @@ class Morphology(object):
         """Tests for morphology equality."""
         if not isinstance(other_morphology, type(self)):
             return False
-        if (len(other_morphology.suffixal_signatures)
-                != len(self.suffixal_signatures)):
+        if other_morphology.suffixal_signatures != self.suffixal_signatures:
             return False
-        if (len(other_morphology.prefixal_signatures)
-                != len(self.prefixal_signatures)):
+        if other_morphology.prefixal_signatures != self.prefixal_signatures:
             return False
-        for signature in self.suffixal_signatures:
-            if signature not in other_morphology.suffixal_signatures:
-                return False
-        for signature in self.prefixal_signatures:
-            if signature not in other_morphology.prefixal_signatures:
-                return False
         return True
 
     def __ne__(self, other_morphology):
@@ -145,8 +139,8 @@ class Morphology(object):
         # Prefixal signatures
         # TODO: is it ok to simply print suffixal then prefixal sigs? Or do
         # we rather want to have them all sorted by robustness? In the former
-        
-        # case do we add some kind of title before each type? In the latter 
+
+        # case do we add some kind of title before each type? In the latter
         # case do we add some kind of indication of the type of each signature?
         # => Don't mix, add a header
         for signature in sorted(self.prefixal_signatures,
@@ -169,7 +163,7 @@ class Morphology(object):
         """
 
         stems = set()
-        for signature in self.suffixal_signatures + self.prefixal_signatures:
+        for signature in self.suffixal_signatures | self.prefixal_signatures:
             stems.update(signature.stems)
         return stems
 
@@ -310,12 +304,12 @@ class Morphology(object):
             stem_sets[tuple(sorted(affixes))].add(stem)
 
         # Build signatures based on sets of stems associated with affixes...
-        signatures = list()
+        signatures = set()
         for affixes, stems in stem_sets.items():
             if len(stems) >= min_num_stems:     # Require min number of stems.
-                signatures.append(Signature(stems, affixes, affix_side))
+                signatures.add(Signature(stems, affixes, affix_side))
 
-        # Update list of signatures of required type...
+        # Update set of signatures of required type...
         if affix_side == "suffix":
             self.suffixal_signatures = signatures
         else:
@@ -325,27 +319,27 @@ class Morphology(object):
 
     def _add_test_signatures(self):
         """"Add signatures to morphology for testing purposes."""
-        self.suffixal_signatures.append(
-            pycrab.Signature(
+        self.suffixal_signatures.add(
+            Signature(
                 stems=["want", "add", "add"],
                 affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
             )
         )
-        self.suffixal_signatures.append(
-            pycrab.Signature(
+        self.suffixal_signatures.add(
+            Signature(
                 stems=["cr", "dr"],
                 affixes=["y", "ied"],
             )
         )
-        self.prefixal_signatures.append(
-            pycrab.Signature(
+        self.prefixal_signatures.add(
+            Signature(
                 stems=["do", "wind"],
                 affixes=["un", "re"],
                 affix_side="prefix",
             )
         )
-        self.prefixal_signatures.append(
-            pycrab.Signature(
+        self.prefixal_signatures.add(
+            Signature(
                 stems=["make", "create"],
                 affixes=["re", pycrab.NULL_AFFIX],
                 affix_side="prefix",
@@ -353,7 +347,7 @@ class Morphology(object):
         )
 
 
-class Signature(object):
+class Signature(tuple):
     """A class for implementing a signature in pycrab.
 
     The Signature class is at the heart of pycrab's morphology representation
@@ -361,29 +355,23 @@ class Signature(object):
     the default, or "prefix"), as well as a dict of stems and a dict of
     affixes, each of which has integer counts as values. Stems and affixes can
     be initialized either with dicts or with other iterables such as lists and
-    sets.
+    sets. Signature objects are immutable.
 
     Examples:
         >>> import pycrab
-        >>> sig = pycrab.Signature(stems=["add"],
-        ...                        affixes={"ing": 8, "ed": 6})
-        >>> sig.stems["want"] += 1
-        >>> sig.stems["want"] += 1
-        >>> sig.stems.update({"play": 2, "guess": 1})
+        >>> sig = pycrab.Signature(
+        ...     stems=["want", "want", "add"],
+        ...     affixes={pycrab.NULL_AFFIX: 6, "ing": 8, "ed": 6},
+        ... )
         >>> sig.stems
-        {'add': 1, 'want': 2, 'play': 2, 'guess': 1}
-        >>> sig.affixes[pycrab.NULL_AFFIX] += 6
-        >>> sig.affixes
-        {'ing': 8, 'ed': 6, NULL: 6}
-        >>> sig2 = pycrab.Signature(stems=["want", "want", "add"])
-        >>> sig2.stems
         {'want': 2, 'add': 1}
-        >>> sig2.affixes.update({"ing": 1, "ed": 2, pycrab.NULL_AFFIX: 1})
-        >>> sig2.robustness
+        >>> sig.affixes
+        {'ing': 8, NULL: 6, 'ed': 6}
+        >>> sig.robustness
         19
         >>> sig2.parses
-        {('add', 'ed'), ('want', NULL), ('want', 'ing'), ('add', 'ing'),
-        ('add', NULL), ('want', 'ed')}
+        {('add', NULL), ('add', 'ed'), ('add', 'ing'), ('want', 'ing'),
+        ('want', 'ed'), ('want', NULL)}
         >>> sig2.get_edge_entropy()
         1.0
         >>> print(sig2)
@@ -403,8 +391,8 @@ class Signature(object):
 
     """
 
-    def __init__(self, stems=None, affixes=None, affix_side="suffix"):
-        """__init__ method for class Signature.
+    def __new__(cls, stems=None, affixes=None, affix_side="suffix"):
+        """__new__ method for class Signature.
 
         Args:
             stems (mapping or iterable, optional): stems associated with this
@@ -417,26 +405,56 @@ class Signature(object):
                 "prefix".
 
         """
-        self.stems = collections.Counter(stems)
-        self.affixes = collections.Counter(affixes)
-        self.affix_side = affix_side
+        return tuple.__new__(cls, (collections.Counter(stems),
+                                   collections.Counter(affixes), affix_side))
 
-    def __eq__(self, other_signature):
-        """Tests for signature equality."""
-        if not isinstance(other_signature, type(self)):
-            return False
-        if other_signature.affix_side != self.affix_side:
-            return False
-        if other_signature.stems != self.stems:
-            return False
-        if other_signature.affixes != self.affixes:
-            return False
-        return True
+    @property
+    def stems(self):
+        """Read-only accessor for the stems attribute.
+        
+        NB: at this point nothing prevents client code from changing the 
+        returned counter (e.g. signature.stems["some_stem"] += 1), which 
+        compromises the objects immutability and the consistency of cached
+        properties. TODO: Consider returning a copy?
+        """
+        return tuple.__getitem__(self, 0)
+        
+    @property
+    def affixes(self):
+        """Read-only accessor for the affixes attribute.
+        
+        NB: at this point nothing prevents client code from changing the 
+        returned counter (e.g. signature.stems["some_stem"] += 1), which 
+        compromises the objects immutability and the consistency of cached
+        properties. TODO: Consider returning a copy?
+        """
+        return tuple.__getitem__(self, 1)
+        
+    @property
+    def affix_side(self):
+        """Read-only accessor for the affix_side attribute."""
+        return tuple.__getitem__(self, 2)
+        
+    # def __eq__(self, other_signature):
+        # """Tests for signature equality."""
+        # if not isinstance(other_signature, type(self)):
+            # return False
+        # if other_signature.affix_side != self.affix_side:
+            # return False
+        # if other_signature.stems != self.stems:
+            # return False
+        # if other_signature.affixes != self.affixes:
+            # return False
+        # return True
 
-    def __ne__(self, other_signature):
-        """Tests for signature inequality."""
-        return not self == other_signature
+    # def __ne__(self, other_signature):
+        # """Tests for signature inequality."""
+        # return not self == other_signature
 
+    def __hash__(self):
+        """Hashing function for signature objects."""
+        return hash(tuple(self.affixes))   
+        
     def __str__(self):
         """Formats the signature for display."""
 
@@ -474,9 +492,9 @@ class Signature(object):
 
         # Number of letters in words or as analyzed...
         letters_in_words = sum(len(st)+len(af) for st, af in self.parses)
-        lines.append("\n    Letters in words if unanalyzed: %10i" 
+        lines.append("\n    Letters in words if unanalyzed: %10i"
                      % letters_in_words)
-        lines.append("               Letters as analyzed: %10i" 
+        lines.append("               Letters as analyzed: %10i"
                      % (letters_in_words-self.robustness))
 
         # Final stem letter entropy...
@@ -488,7 +506,7 @@ class Signature(object):
 
         return "\n".join(lines)
 
-    @property
+    @cached_property
     def robustness(self):
         """Returns the robustness of the signature.
 
@@ -496,20 +514,46 @@ class Signature(object):
         the sum of the lengths of all words covered by the signature, minus the
         sum of the lengths of stems, minus the sum of the lengths of affixes.
 
+        Args:
+            none.
+
         Returns:
             int.
 
         """
+        return self._compute_robustness()
 
+    def _compute_robustness(self):
+        """Computes the robustness of the signature.
+
+        Args:
+            none.
+
+        Returns:
+            int.
+
+        """
         saved_stem_length = len("".join(self.stems)) * (len(self.affixes)-1)
         saved_affix_length = len("".join(self.affixes)) * (len(self.stems)-1)
         return saved_stem_length + saved_affix_length
 
-    @property
+    @cached_property
     def parses(self):
         """Construct a set of parses using the signature's stems and affixes.
 
         Parses are pairs (prefix, stem) or (stem, suffix).
+
+        Args:
+            none.
+
+        Returns:
+            set of tuples.
+
+        """
+        return self._compute_parses()
+
+    def _compute_parses(self):
+        """Construct a set of parses using the signature's stems and affixes.
 
         Args:
             none.

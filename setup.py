@@ -67,6 +67,7 @@ PACKAGES = ["pycrab"]
 
 INSTALL_REQUIRES = [
     "six",
+    "cached_property",
 ]
 
 setup(
