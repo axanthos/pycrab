@@ -45,7 +45,10 @@ def entropy(counts):
 
 
 class ImmutableDict(dict):
-    """Immutable dict, based on https://gist.github.com/glyphobet/2687745."""
+    """Immutable dict, based on https://gist.github.com/glyphobet/2687745.
+    
+    Todo: unit tests.
+    """
 
     def __init__(self, arg):
         # Initialize dict like collections.Counter.
