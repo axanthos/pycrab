@@ -21,6 +21,7 @@ from cached_property import cached_property
 
 import pycrab.utils
 from pycrab.null_affix import NULLAffix
+from pycrab.utils import ImmutableDict
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -404,29 +405,17 @@ class Signature(tuple):
                 "prefix".
 
         """
-        return tuple.__new__(cls, (collections.Counter(stems),
-                                   collections.Counter(affixes), affix_side))
+        return tuple.__new__(cls, (ImmutableDict(stems),
+                                   ImmutableDict(affixes), affix_side))
 
     @property
     def stems(self):
-        """Read-only accessor for the stems attribute.
-
-        NB: at this point nothing prevents client code from changing the
-        returned counter (e.g. signature.stems["some_stem"] += 1), which
-        compromises the objects immutability and the consistency of cached
-        properties. TODO: Consider returning a copy?
-        """
+        """Read-only accessor for the stems attribute."""
         return tuple.__getitem__(self, 0)
 
     @property
     def affixes(self):
-        """Read-only accessor for the affixes attribute.
-
-        NB: at this point nothing prevents client code from changing the
-        returned counter (e.g. signature.affixes["some_affix"] += 1), which
-        compromises the objects immutability and the consistency of cached
-        properties. TODO: Consider returning a copy?
-        """
+        """Read-only accessor for the affixes attribute."""
         return tuple.__getitem__(self, 1)
 
     @property
