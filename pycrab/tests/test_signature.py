@@ -95,6 +95,12 @@ class TestSignature(TestCase):
         }
         self.assertEqual(signature.parses, expected_parses)
 
+    def test_affix_string(self):
+        self.assertEqual(self.signature.affix_string, "NULL=ed=ing")
+
+    def test_example_stem(self):
+        self.assertEqual(self.signature.example_stem, "add")
+
     def test_str(self):
         signature = morphology.Signature(["want", "want", "add"],
                                          ["ing", "ed", morphology.NULL_AFFIX])

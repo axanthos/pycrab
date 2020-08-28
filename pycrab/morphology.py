@@ -126,28 +126,106 @@ class Morphology(object):
         """Tests for morphology inequality."""
         return not self == other_morphology
 
-    def __str__(self):
-        """Formats the morphology for display."""
+    def serialize(self, affix_side="suffix"):
+        """Formats the morphology for synthetic display.
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
 
+        Returns:
+            String.
+        """
+
+        # Select affix side.
+        if affix_side == "suffix":
+            signatures = self.suffixal_signatures 
+        else:
+            signatures = self.prefixal_signatures 
+
+        # Compute total robustness.
+        total_robustness = sum(sig.robustness for sig in signatures)
+
+        # Compute first and last column header length...
+        max_affix_str_len = max(len(sig.affix_string) for sig in signatures)
+        first_col_len = max(max_affix_str_len, len("Signature"))
+        max_example_stem_len = max(len(sig.example_stem) for sig in signatures)
+        last_col_len = max(max_example_stem_len, len("Example stem"))
+        
         lines = list()
 
-        # Suffixal signatures
-        for signature in sorted(self.suffixal_signatures,
+        # Define headers and corresponding content formats...
+        headers = [
+            "Stem count", 
+            "Robustness",
+            "Proportion of robustness",
+            "Running sum",
+            "Edge entropy",
+        ]
+        formats = [
+            "%{}s",
+            "%{}s",
+            "%{}.5s",
+            "%{}.5s",
+            "%{}.4s",
+        ]
+        
+        # Construct header row...
+        separator_len = 3
+        divider_len = sum(len(h) for h in headers)
+        divider_len += first_col_len + last_col_len
+        divider_len += separator_len * (len(headers)+1)
+        divider = "-" * divider_len
+        header_row = ("%-"+str(first_col_len+separator_len)+"s") % "Signature"
+        header_row += (" " * separator_len).join(headers)
+        header_row += " " * separator_len
+        header_row += ("%-"+str(last_col_len)+"s") % "Example stem"
+        lines.extend([divider, header_row, divider])
+        
+        # Format each signature...
+        running_sum = 0
+        for signature in sorted(signatures,
+                                key=lambda signature: signature.robustness,
+                                reverse=True):
+            proportion_of_robustness = signature.robustness / total_robustness
+            running_sum += proportion_of_robustness
+            vals = [
+                len(signature.stems),
+                signature.robustness,
+                proportion_of_robustness,
+                running_sum,
+                signature.get_edge_entropy(),
+            ]
+            val_len_formats = [(signature.affix_string, first_col_len, "%-{}s")]
+            val_len_formats.extend((vals[idx], len(headers[idx]), formats[idx])
+                                    for idx in range(len(headers)))               
+            val_len_formats.append((signature.example_stem, 
+                                    last_col_len, "%-{}s"))
+            cells = [my_format.format(length) % val 
+                     for val, length, my_format in val_len_formats]
+            lines.append((" " * separator_len).join(cells))
+                                
+        return "\n".join(lines)
+
+    def serialize_signatures(self, affix_side="suffix"):
+        """Formats the signatures for detailed display.
+        
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            String.
+        """
+
+        if affix_side == "suffix":
+            signatures = self.suffixal_signatures 
+        else:
+            signatures = self.prefixal_signatures 
+        lines = list()
+        for signature in sorted(signatures,
                                 key=lambda signature: signature.robustness,
                                 reverse=True):
             lines.append(str(signature))
-
-        # Prefixal signatures
-        # TODO: is it ok to simply print suffixal then prefixal sigs? Or do
-        # we rather want to have them all sorted by robustness? In the former
-        # case do we add some kind of title before each type? In the latter
-        # case do we add some kind of indication of the type of each signature?
-        # => Don't mix, add a header
-        for signature in sorted(self.prefixal_signatures,
-                                key=lambda signature: signature.robustness,
-                                reverse=True):
-            lines.append(str(signature))
-
         return "\n".join(lines)
 
     @property
@@ -374,6 +452,8 @@ class Signature(tuple):
         ('want', 'ed'), ('want', NULL)}
         >>> sig2.get_edge_entropy()
         1.0
+        >>> print(sig2.affix_string)
+        NULL=ed=ing
         >>> print(sig2)
         ================================================== NULL=ed=ing
 
@@ -433,8 +513,7 @@ class Signature(tuple):
         lines = list()
 
         # Alphabetical list of affixes...
-        lines.append("=" * 50 + " " +
-                     "=".join(str(affix) for affix in sorted(self.affixes)))
+        lines.append("=" * 50 + " " + self.affix_string)
         lines.append("")
 
         # Stop here if signature has no stems.
@@ -477,6 +556,58 @@ class Signature(tuple):
         lines.append("\nNumber of stems: %i\n" % len(self.stems))
 
         return "\n".join(lines)
+
+    @cached_property
+    def affix_string(self):
+        """Returns a string with the signature's sorted affixes.
+
+        Args:
+            none.
+
+        Returns:
+            string.
+
+        """
+        return self._compute_affix_string()
+        
+    def _compute_affix_string(self):
+        """Construct a string with the signature's sorted affixes.
+
+        Args:
+            none.
+
+        Returns:
+            string.
+
+        """
+        
+        return "=".join(str(affix) for affix in sorted(self.affixes))
+
+    @cached_property
+    def example_stem(self): # TODO: add to examples
+        """Returns the signature's most frequent stem.
+
+        Args:
+            none.
+
+        Returns:
+            string.
+
+        """
+        return self._compute_example_stem()
+        
+    def _compute_example_stem(self):
+        """Returns the signature's most frequent stem.
+
+        Args:
+            none.
+
+        Returns:
+            string.
+
+        """
+        
+        return max(self.stems, key=self.stems.get)
 
     @cached_property
     def robustness(self):
