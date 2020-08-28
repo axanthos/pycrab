@@ -42,3 +42,34 @@ def entropy(counts):
             my_sum += count
             weighted_sum_of_logs += count * math.log(count)
     return (math.log(my_sum) - weighted_sum_of_logs / my_sum) / math.log(2)
+
+
+class ImmutableDict(dict):
+    """Immutable dict, based on https://gist.github.com/glyphobet/2687745.
+    
+    Todo: unit tests.
+    """
+
+    def __init__(self, arg):
+        # Initialize dict like collections.Counter.
+        super().__init__(collections.Counter(arg))
+
+    def __setitem__(self, key, value):
+        raise TypeError("%r object does not support item assignment"
+                        % type(self).__name__)
+
+    def __delitem__(self, key):
+        raise TypeError("%r object does not support item deletion"
+                        % type(self).__name__)
+
+    def __getattribute__(self, attribute):
+        if attribute in ('clear', 'update', 'pop', 'popitem', 'setdefault'):
+            raise AttributeError("%r object has no attribute %r"
+                                 % (type(self).__name__, attribute))
+        return dict.__getattribute__(self, attribute)
+
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
+
+    def fromkeys(self, S, v):
+        return type(self)(dict(self).fromkeys(S, v))
