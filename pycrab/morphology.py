@@ -13,9 +13,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from io import open
 from builtins import range
 import collections
 import itertools
+import re
+import os
 
 from cached_property import cached_property
 
@@ -32,14 +35,26 @@ __maintainer__ = "Aris Xanthos"
 __email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
 
-NULL_AFFIX = NULLAffix()
-"""Module-level constant representing the NULL affix."""
-
 MIN_NUM_STEMS = 2
 """Module-level constant for the min number of stems in a signature."""
 
+MIN_STEM_LEN = 2
+"""Module-level constant for the min number of letters in a stem."""
+
 AFFIX_DELIMITER = "="
 """Module-level constant for the delimiter symbol in affix strings."""
+
+TOKENIZATION_REGEX = r"\w+(?u)"
+"""Module-level constant for the regex pattern used to tokenize text."""
+
+LOWERCASE_INPUT = True
+"""Module-level constant indicating wether input words should be lowercased."""
+
+INPUT_ENCODING = "utf8"
+"""Module-level constant for input file default encoding."""
+
+NULL_AFFIX = NULLAffix()
+"""Module-level constant representing the NULL affix."""
 
 
 class Morphology(object):
@@ -189,15 +204,15 @@ class Morphology(object):
             signatures = self.suffixal_signatures
             affixes = self.suffixes
         else:
-            signatures = self.prefixal_signatures 
+            signatures = self.prefixal_signatures
             affixes = self.prefixes
 
-        # TODO: Number of words (corpus count)? 
-        # TODO: Total letter count in words? 
- 
+        # TODO: Number of words (corpus count)?
+        # TODO: Total letter count in words?
+
         # Number of stems.
         lines.append("%-45s %10i" % ("Number of stems:", len(self.stems)))
-        
+
         # Number of signatures.
         lines.append("%-45s %10i" % ("Number of signatures:", len(signatures)))
 
@@ -205,27 +220,27 @@ class Morphology(object):
         singleton = doubleton = 0
         for signature in signatures:
             if len(signature.stems) == 1:
-                singleton += 1 
+                singleton += 1
             elif len(signature.stems) == 2:
-                doubleton += 1 
+                doubleton += 1
         lines.append("%-45s %10i" % (
-            "Number of singleton signatures (one stem):", 
+            "Number of singleton signatures (one stem):",
             singleton,
         ))
         lines.append("%-45s %10i" % (
-            "Number of doubleton signatures (two stems):", 
+            "Number of doubleton signatures (two stems):",
             doubleton,
         ))
-        
+
         # Total number of letters in stems.
         lines.append("%-45s %10i" % (
-            "Total number of letters in stems", 
+            "Total number of letters in stems",
             sum(len(stem) for stem in self.stems),
         ))
 
         # Total number of affix letters.
         lines.append("%-45s %10i" % (
-            "Total number of affix letters", 
+            "Total number of affix letters",
             sum(len(affix) for affix in affixes),
         ))
 
@@ -235,15 +250,15 @@ class Morphology(object):
             num_letters += sum(len(stem) for stem in signature.stems)
             num_letters += sum(len(affix) for affix in signature.affixes)
         lines.append("%-45s %10i" % (
-            "Total number of letters in signatures", 
+            "Total number of letters in signatures",
             num_letters,
         ))
 
-        # TODO: Number of analyzed words? 
+        # TODO: Number of analyzed words?
         # TODO: Total number of letters in analyzed words?
 
         lines.append("")
-        
+
         # Compute total robustness.
         total_robustness = sum(sig.robustness for sig in signatures)
 
@@ -252,10 +267,10 @@ class Morphology(object):
         first_col_len = max(max_affix_str_len, len("Signature"))
         max_example_stem_len = max(len(sig.example_stem) for sig in signatures)
         last_col_len = max(max_example_stem_len, len("Example stem"))
-        
+
         # Define headers and corresponding content formats...
         headers = [
-            "Stem count", 
+            "Stem count",
             "Robustness",
             "Proportion of robustness",
             "Running sum",
@@ -268,7 +283,7 @@ class Morphology(object):
             "%{}.5s",
             "%{}.4s",
         ]
-        
+
         # Construct header row...
         separator_len = 3
         divider_len = sum(len(h) for h in headers)
@@ -280,7 +295,7 @@ class Morphology(object):
         header_row += " " * separator_len
         header_row += ("%-"+str(last_col_len)+"s") % "Example stem"
         lines.extend([divider, header_row, divider])
-        
+
         # Format each signature...
         running_sum = 0
         for signature in sorted(signatures,
@@ -297,18 +312,18 @@ class Morphology(object):
             ]
             val_len_formats = [(signature.affix_string, first_col_len, "%-{}s")]
             val_len_formats.extend((vals[idx], len(headers[idx]), formats[idx])
-                                    for idx in range(len(headers)))               
-            val_len_formats.append((signature.example_stem, 
+                                    for idx in range(len(headers)))
+            val_len_formats.append((signature.example_stem,
                                     last_col_len, "%-{}s"))
-            cells = [my_format.format(length) % val 
+            cells = [my_format.format(length) % val
                      for val, length, my_format in val_len_formats]
             lines.append((" " * separator_len).join(cells))
-                                
+
         return "\n".join(lines)
 
     def serialize_signatures(self, affix_side="suffix"):
         """Formats the signatures for detailed display.
-        
+
         Args:
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
@@ -318,9 +333,9 @@ class Morphology(object):
         """
 
         if affix_side == "suffix":
-            signatures = self.suffixal_signatures 
+            signatures = self.suffixal_signatures
         else:
-            signatures = self.prefixal_signatures 
+            signatures = self.prefixal_signatures
         lines = list()
         for signature in sorted(signatures,
                                 key=lambda signature: signature.robustness,
@@ -449,6 +464,168 @@ class Morphology(object):
         for signature in signatures:
             parses.update(signature.parses)
         return parses
+
+    def find_signatures1(self, word_counts, min_stem_len=MIN_STEM_LEN,
+                         min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
+        """Find initial signatures (using Goldsmith's Lxa-Crab algorithm).
+
+        Args:
+            word_counts (Counter): word to count dictionary
+            min_stem_len (int, optional): minimum number of letters required in
+                a stem (default is MIN_STEM_LEN).
+            min_num_stems (int, optional): minimum number of stems required in
+                a signature (default is MIN_NUM_STEMS).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: prefixal signatures?
+        Todo: test.
+
+        """
+
+        protostems = set()
+
+        # For each pair of successive words (in alphabetical order)...
+        sorted_words = sorted(word_counts.keys())
+        for idx in range(len(sorted_words)-1):
+
+            # Add longest common prefix to protostems (if long enough)...
+            protostem = os.path.commonprefix(sorted_words[idx:idx+2])
+            if len(protostem) >= min_stem_len:
+                protostems.add(protostem)
+
+        # List all possible continuations of each protostem...
+        continuations = collections.defaultdict(list)
+        for word in word_counts.keys():
+            for prefix_len in range(MIN_STEM_LEN, len(word)+1):
+                prefix = word[:prefix_len]
+                if prefix in protostems:
+                    continuations[prefix].append(word[prefix_len:])
+
+        # Find all stems associated with each continuation list...
+        protostem_lists = collections.defaultdict(set)
+        for protostem, continuation in continuations.items():
+            protostem_lists[tuple(sorted(continuation))].add(protostem)
+
+        # Signatures are continuation lists with min_num_stems stems or more...
+        signatures = collections.defaultdict(set)
+        parasignatures = dict()
+        for continuations, protostems in protostem_lists.items():
+            if len(protostems) >= min_num_stems:
+                continuations = [cont if len(cont) else NULL_AFFIX
+                                 for cont in continuations]  # "" => NULL_AFFIX
+                self.suffixal_signatures.add(Signature(stems=protostems, 
+                                                       affixes=continuations))
+
+    def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
+                            min_stem_len=MIN_STEM_LEN, 
+                            min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
+        """Learn morphology based on wordlist.
+
+        Args:
+            wordlist (list of strings): list of words, possibly repeated
+            lowercase_input (bool, optional): indicates whether input words
+                should be lowercased (default is LOWERCASE_INPUT).
+            min_stem_len (int, optional): minimum number of letters required in
+                a stem (default is MIN_STEM_LEN).
+            min_num_stems (int, optional): minimum number of stems required in
+                a signature (default is MIN_NUM_STEMS).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: test.
+
+        """
+
+        # Lowercase words if needed...
+        if lowercase_input:
+            wordlist = [word.lower() for word in wordlist]
+
+        # Count words.
+        word_counts = collections.Counter(wordlist)
+
+        # Find suffixal signatures based on words (stored in word_counts).
+        self.find_signatures1(word_counts, min_stem_len, min_num_stems, 
+                              affix_side)
+
+    def learn_from_string(self, input_string, 
+                          tokenization_regex=TOKENIZATION_REGEX,
+                          lowercase_input=LOWERCASE_INPUT,
+                          min_stem_len=MIN_STEM_LEN,  
+                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
+        """Learn morphology based on a single, unsegmented string.
+
+        NB: tokenization is done with a regular expression.
+
+        Args:
+            input_string (string): the text to learn from.
+            tokenization_regex (string, optional): regular expression used for
+                tokenizing input text (default is TOKENIZATION_REGEX).
+            lowercase_input (bool, optional): indicates whether input words
+                should be lowercased (default is LOWERCASE_INPUT).
+            min_stem_len (int, optional): minimum number of letters required in
+                a stem (default is MIN_STEM_LEN).
+            min_num_stems (int, optional): minimum number of stems required in
+                a signature (default is MIN_NUM_STEMS).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+        
+        Todo: test.
+
+        """
+
+        # Split content into words...
+        words = re.findall(tokenization_regex, input_string)
+
+        self.learn_from_wordlist(words, lowercase_input, min_stem_len,
+                                 min_num_stems, affix_side)
+
+    def learn_from_file(self, input_file_path, encoding=INPUT_ENCODING,
+                        tokenization_regex=TOKENIZATION_REGEX,
+                        lowercase_input=LOWERCASE_INPUT,
+                        min_stem_len=MIN_STEM_LEN, min_num_stems=MIN_NUM_STEMS, 
+                        affix_side="suffix"):
+        """Learn morphology based on a text file.
+
+        NB: tokenization is done with a regular expression.
+
+        Args:
+            input_file_path (string or pathlib.Path object): text file path.
+            encoding (string, optional): input file encoding (default is
+                INPUT_ENCODING).
+            tokenization_regex (string, optional): regular expression used for
+                tokenizing input text (default is TOKENIZATION_REGEX).
+            lowercase_input (bool, optional): indicates whether input words
+                should be lowercased (default is LOWERCASE_INPUT).
+            min_stem_len (int, optional): minimum number of letters required in
+                a stem (default is MIN_STEM_LEN).
+            min_num_stems (int, optional): minimum number of stems required in
+                a signature (default is MIN_NUM_STEMS).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: test.
+
+        """
+
+        # Attempt to open and read file...
+        try:
+            input_file = open(input_file_path, encoding=encoding, mode="r")
+            content = input_file.read()
+            input_file.close()
+            self.learn_from_string(content, tokenization_regex,
+                                   lowercase_input, min_stem_len, 
+                                   min_num_stems, affix_side)
+        except IOError:
+            print("Couldn't read file ", input_file_path)
 
     def build_signatures(self, parses, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
@@ -673,7 +850,7 @@ class Signature(tuple):
 
         """
         return self._compute_affix_string()
-        
+
     def _compute_affix_string(self):
         """Construct a string with the signature's sorted affixes.
 
@@ -684,8 +861,8 @@ class Signature(tuple):
             string.
 
         """
-        
-        return AFFIX_DELIMITER.join(str(affix) 
+
+        return AFFIX_DELIMITER.join(str(affix)
                                     for affix in sorted(self.affixes))
 
     @cached_property
@@ -700,7 +877,7 @@ class Signature(tuple):
 
         """
         return self._compute_example_stem()
-        
+
     def _compute_example_stem(self):
         """Returns the signature's most frequent stem.
 
@@ -711,7 +888,7 @@ class Signature(tuple):
             string.
 
         """
-        
+
         return max(self.stems, key=self.stems.get)
 
     @cached_property
