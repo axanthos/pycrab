@@ -38,6 +38,9 @@ NULL_AFFIX = NULLAffix()
 MIN_NUM_STEMS = 2
 """Module-level constant for the min number of stems in a signature."""
 
+AFFIX_DELIMITER = "="
+"""Module-level constant for the delimiter symbol in affix strings."""
+
 
 class Morphology(object):
     """A class for implementing an entire morphology in pycrab.
@@ -443,18 +446,22 @@ class Signature(tuple):
         ... )
         >>> sig.stems
         {'want': 2, 'add': 1}
+        >>> sig.example_stem
+        'add'
         >>> sig.affixes
         {'ing': 8, NULL: 6, 'ed': 6}
+        >>> sig.affix_string
+        'NULL=ed=ing'
         >>> sig.robustness
         19
-        >>> sig2.parses
+        >>> sig.parses
         {('add', NULL), ('add', 'ed'), ('add', 'ing'), ('want', 'ing'),
         ('want', 'ed'), ('want', NULL)}
-        >>> sig2.get_edge_entropy()
+        >>> sig.get_edge_entropy()
         1.0
-        >>> print(sig2.affix_string)
+        >>> print(sig.affix_string)
         NULL=ed=ing
-        >>> print(sig2)
+        >>> print(sig)
         ================================================== NULL=ed=ing
 
         add     want
@@ -581,10 +588,11 @@ class Signature(tuple):
 
         """
         
-        return "=".join(str(affix) for affix in sorted(self.affixes))
+        return AFFIX_DELIMITER.join(str(affix) 
+                                    for affix in sorted(self.affixes))
 
     @cached_property
-    def example_stem(self): # TODO: add to examples
+    def example_stem(self):
         """Returns the signature's most frequent stem.
 
         Args:

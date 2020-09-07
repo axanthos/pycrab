@@ -96,7 +96,8 @@ class TestSignature(TestCase):
         self.assertEqual(signature.parses, expected_parses)
 
     def test_affix_string(self):
-        self.assertEqual(self.signature.affix_string, "NULL=ed=ing")
+        expected = "NULL=ed=ing".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertEqual(self.signature.affix_string, expected)
 
     def test_example_stem(self):
         self.assertEqual(self.signature.example_stem, "add")
@@ -105,7 +106,7 @@ class TestSignature(TestCase):
         signature = morphology.Signature(["want", "want", "add"],
                                          ["ing", "ed", morphology.NULL_AFFIX])
         expected_str = (
-            "================================================== NULL=ed=ing\n"
+            "================================================== %s\n"
             "\n"
             "add     want\n"
             "------------------------\n"
@@ -118,5 +119,6 @@ class TestSignature(TestCase):
             "Final stem letter entropy: 1.000\n"
             "\n"
             "Number of stems: 2\n"
+            % signature.affix_string
         )
         self.assertEqual(str(signature), expected_str)
