@@ -89,6 +89,49 @@ class Morphology(object):
         >>> morphology.prefixal_parses
         {(NULL, 'create'), ('re', 'make'), ('un', 'wind'), ('re', 'do'),
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
+        >>> print(morphology.serialize())   # possible arg. affix_side='prefix'
+        Number of stems:                                       8
+        Number of signatures:                                  2
+        Number of singleton signatures (one stem):             0
+        Number of doubleton signatures (two stems):            2
+        Total number of letters in stems                      27
+        Total number of affix letters                          9
+        Total number of letters in signatures                 20
+
+        ------------------------------------------------------------------------------------------------------------
+        Signature     Stem count   Robustness   Proportion of robustness   Running sum   Edge entropy   Example stem
+        ------------------------------------------------------------------------------------------------------------
+        NULL=ed=ing            2           19                      0.703         0.703            1.0   add
+        ied=y                  2            8                      0.296           1.0            0.0   cr
+
+        >>> print(morphology.serialize_signatures())   # or affix_side='prefix'
+        ================================================== NULL=ed=ing
+
+        add     want
+        ------------------------
+        add  2     want 1
+        ------------------------
+
+            Letters in words if unanalyzed:         31
+                       Letters as analyzed:         12
+
+        Final stem letter entropy: 1.000
+
+        Number of stems: 2
+
+        ================================================== ied=y
+
+        cr    dr
+        ------------------------
+        cr 1     dr 1
+        ------------------------
+
+            Letters in words if unanalyzed:         16
+                       Letters as analyzed:          8
+
+        Final stem letter entropy: 0.000
+
+        Number of stems: 2
 
     Todo:
         - add min_stem_length constraint? in build_signatures?
@@ -139,12 +182,68 @@ class Morphology(object):
             String.
         """
 
+        lines = list()
+
         # Select affix side.
         if affix_side == "suffix":
-            signatures = self.suffixal_signatures 
+            signatures = self.suffixal_signatures
+            affixes = self.suffixes
         else:
             signatures = self.prefixal_signatures 
+            affixes = self.prefixes
 
+        # TODO: Number of words (corpus count) 
+        # TODO: Total letter count in words 
+ 
+        # Number of stems.
+        lines.append("%-45s %10i" % ("Number of stems:", len(self.stems)))
+        
+        # Number of signatures.
+        lines.append("%-45s %10i" % ("Number of signatures:", len(signatures)))
+
+        # Number of singleton and doubleton signatures...
+        singleton = doubleton = 0
+        for signature in signatures:
+            if len(signature.stems) == 1:
+                singleton += 1 
+            elif len(signature.stems) == 2:
+                doubleton += 1 
+        lines.append("%-45s %10i" % (
+            "Number of singleton signatures (one stem):", 
+            singleton,
+        ))
+        lines.append("%-45s %10i" % (
+            "Number of doubleton signatures (two stems):", 
+            doubleton,
+        ))
+        
+        # Total number of letters in stems.
+        lines.append("%-45s %10i" % (
+            "Total number of letters in stems", 
+            sum(len(stem) for stem in self.stems),
+        ))
+
+        # Total number of affix letters.
+        lines.append("%-45s %10i" % (
+            "Total number of affix letters", 
+            sum(len(affix) for affix in affixes),
+        ))
+
+        # Total number of letters in signatures.
+        num_letters = 0
+        for signature in signatures:
+            num_letters += sum(len(stem) for stem in signature.stems)
+            num_letters += sum(len(affix) for affix in signature.affixes)
+        lines.append("%-45s %10i" % (
+            "Total number of letters in signatures", 
+            num_letters,
+        ))
+
+        # TODO: Number of analyzed words 
+        # TODO: Total number of letters in analyzed words 
+
+        lines.append("")
+        
         # Compute total robustness.
         total_robustness = sum(sig.robustness for sig in signatures)
 
@@ -154,8 +253,6 @@ class Morphology(object):
         max_example_stem_len = max(len(sig.example_stem) for sig in signatures)
         last_col_len = max(max_example_stem_len, len("Example stem"))
         
-        lines = list()
-
         # Define headers and corresponding content formats...
         headers = [
             "Stem count", 
