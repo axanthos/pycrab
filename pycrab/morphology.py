@@ -480,15 +480,21 @@ class Morphology(object):
 
         Returns: nothing.
 
-        Todo: prefixal signatures?
         Todo: test.
 
         """
 
         protostems = set()
 
+        # Select affix side...
+        if affix_side == "suffix":
+            signatures = self.suffixal_signatures        
+            sorted_words = sorted(list(word_counts))
+        else:
+            signatures = self.prefixal_signatures
+            sorted_words = sorted(word[::-1] for word in word_counts)
+
         # For each pair of successive words (in alphabetical order)...
-        sorted_words = sorted(word_counts.keys())
         for idx in range(len(sorted_words)-1):
 
             # Add longest common prefix to protostems (if long enough)...
@@ -498,7 +504,7 @@ class Morphology(object):
 
         # List all possible continuations of each protostem...
         continuations = collections.defaultdict(list)
-        for word in word_counts.keys():
+        for word in sorted_words:
             for prefix_len in range(MIN_STEM_LEN, len(word)+1):
                 prefix = word[:prefix_len]
                 if prefix in protostems:
@@ -509,22 +515,32 @@ class Morphology(object):
         for protostem, continuation in continuations.items():
             protostem_lists[tuple(sorted(continuation))].add(protostem)
 
-        # Signatures are continuation lists with min_num_stems stems or more...
-        signatures = collections.defaultdict(set)
-        parasignatures = dict()
+        # For each continuation lists with min_num_stems stems or more...
         for continuations, protostems in protostem_lists.items():
             if len(protostems) >= min_num_stems:
+            
+                # If affix side is prefix, reverse stems and continuations...
+                if affix_side == "prefix":
+                    protostems = [protostem[::-1] for protostem in protostems]
+                    continuations = [cont[::-1] for cont in continuations]
+
+                # Replace empty affix with NULL_AFFIX.
                 continuations = [cont if len(cont) else NULL_AFFIX
-                                 for cont in continuations]  # "" => NULL_AFFIX
-                stem_counts = collections.Counter()
-                cont_counts = collections.Counter()
-                for stem in protostems:
+                                 for cont in continuations]
+                                
+                # Get stem and continuation counts...                 
+                protostem_counts = collections.Counter()
+                continuation_counts = collections.Counter()
+                for protostem in protostems:     
                     for continuation in continuations:
-                        word_count = word_counts[stem + continuation]
-                        stem_counts[stem] += word_count
-                        cont_counts[continuation] += word_count
-                self.suffixal_signatures.add(Signature(stems=stem_counts,
-                                                       affixes=cont_counts))
+                        word_count = word_counts[protostem + continuation]
+                        protostem_counts[protostem] += word_count
+                        continuation_counts[continuation] += word_count
+                        
+                # Create and store signature.
+                signatures.add(Signature(stems=protostem_counts,
+                                         affixes=continuation_counts, 
+                                         affix_side=affix_side))
 
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
                             min_stem_len=MIN_STEM_LEN,
