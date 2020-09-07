@@ -192,8 +192,8 @@ class Morphology(object):
             signatures = self.prefixal_signatures 
             affixes = self.prefixes
 
-        # TODO: Number of words (corpus count) 
-        # TODO: Total letter count in words 
+        # TODO: Number of words (corpus count)? 
+        # TODO: Total letter count in words? 
  
         # Number of stems.
         lines.append("%-45s %10i" % ("Number of stems:", len(self.stems)))
@@ -239,8 +239,8 @@ class Morphology(object):
             num_letters,
         ))
 
-        # TODO: Number of analyzed words 
-        # TODO: Total number of letters in analyzed words 
+        # TODO: Number of analyzed words? 
+        # TODO: Total number of letters in analyzed words?
 
         lines.append("")
         
