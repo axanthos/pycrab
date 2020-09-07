@@ -516,11 +516,18 @@ class Morphology(object):
             if len(protostems) >= min_num_stems:
                 continuations = [cont if len(cont) else NULL_AFFIX
                                  for cont in continuations]  # "" => NULL_AFFIX
-                self.suffixal_signatures.add(Signature(stems=protostems, 
-                                                       affixes=continuations))
+                stem_counts = collections.Counter()
+                cont_counts = collections.Counter()
+                for stem in protostems:
+                    for continuation in continuations:
+                        word_count = word_counts[stem + continuation]
+                        stem_counts[stem] += word_count
+                        cont_counts[continuation] += word_count
+                self.suffixal_signatures.add(Signature(stems=stem_counts,
+                                                       affixes=cont_counts))
 
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
-                            min_stem_len=MIN_STEM_LEN, 
+                            min_stem_len=MIN_STEM_LEN,
                             min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Learn morphology based on wordlist.
 
@@ -549,13 +556,13 @@ class Morphology(object):
         word_counts = collections.Counter(wordlist)
 
         # Find suffixal signatures based on words (stored in word_counts).
-        self.find_signatures1(word_counts, min_stem_len, min_num_stems, 
+        self.find_signatures1(word_counts, min_stem_len, min_num_stems,
                               affix_side)
 
-    def learn_from_string(self, input_string, 
+    def learn_from_string(self, input_string,
                           tokenization_regex=TOKENIZATION_REGEX,
                           lowercase_input=LOWERCASE_INPUT,
-                          min_stem_len=MIN_STEM_LEN,  
+                          min_stem_len=MIN_STEM_LEN,
                           min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Learn morphology based on a single, unsegmented string.
 
@@ -575,7 +582,7 @@ class Morphology(object):
                 "prefix".
 
         Returns: nothing.
-        
+
         Todo: test.
 
         """
@@ -589,7 +596,7 @@ class Morphology(object):
     def learn_from_file(self, input_file_path, encoding=INPUT_ENCODING,
                         tokenization_regex=TOKENIZATION_REGEX,
                         lowercase_input=LOWERCASE_INPUT,
-                        min_stem_len=MIN_STEM_LEN, min_num_stems=MIN_NUM_STEMS, 
+                        min_stem_len=MIN_STEM_LEN, min_num_stems=MIN_NUM_STEMS,
                         affix_side="suffix"):
         """Learn morphology based on a text file.
 
@@ -622,7 +629,7 @@ class Morphology(object):
             content = input_file.read()
             input_file.close()
             self.learn_from_string(content, tokenization_regex,
-                                   lowercase_input, min_stem_len, 
+                                   lowercase_input, min_stem_len,
                                    min_num_stems, affix_side)
         except IOError:
             print("Couldn't read file ", input_file_path)
