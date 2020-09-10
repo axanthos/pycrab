@@ -12,6 +12,11 @@ from __future__ import division
 from __future__ import print_function
 
 from unittest import TestCase
+from unittest.mock import patch
+
+from collections import Counter
+import tempfile
+import os
 
 from pycrab import morphology
 
@@ -119,6 +124,44 @@ class TestMorphology(TestCase):
     def test_prefixes(self):
         expected_prefixes = {morphology.NULL_AFFIX, "un", "re"}
         self.assertEqual(self.morphology.prefixes, expected_prefixes)
+
+    @patch('pycrab.Morphology.find_signatures1')
+    def test_mock_learn_from_wordlist_lower(self, mock_find_signatures1):
+        my_morphology = morphology.Morphology()
+        wordlist = ["Test", "data", "test"]
+        wordlist_lower = [word.lower() for word in wordlist]
+        my_morphology.learn_from_wordlist(wordlist, True, 1, 1, "prefix")
+        mock_find_signatures1.assert_called_with(Counter(wordlist_lower), 1, 1,
+                                                 "prefix")
+
+    @patch('pycrab.Morphology.find_signatures1')
+    def test_mock_learn_from_wordlist_not_lower(self, mock_find_signatures1):
+        my_morphology = morphology.Morphology()
+        wordlist = ["Test", "data", "test"]
+        my_morphology.learn_from_wordlist(wordlist, False, 1, 1, "prefix")
+        mock_find_signatures1.assert_called_with(Counter(wordlist), 1, 1,
+                                                 "prefix")
+
+    @patch('pycrab.Morphology.learn_from_wordlist')
+    def test_learn_from_string(self, mock_learn_from_wordlist):
+        my_morphology = morphology.Morphology()
+        my_morphology.learn_from_string("Test data test", r"\w+", False, 1, 1,
+                                        "prefix")
+        mock_learn_from_wordlist.assert_called_with(["Test", "data", "test"],
+                                                    False, 1, 1, "prefix")
+
+    @patch('pycrab.Morphology.learn_from_string')
+    def test_learn_from_file(self, mock_learn_from_string):
+        temp = tempfile.NamedTemporaryFile(delete=False)
+        temp.write(b"Test data test")
+        name = temp.name
+        temp.close()
+        my_morphology = morphology.Morphology()
+        my_morphology.learn_from_file(name, "utf8", r"\w+", False, 1, 1,
+                                      "prefix")
+        mock_learn_from_string.assert_called_with("Test data test", r"\w+",
+                                                    False, 1, 1, "prefix")
+        os.remove(name)
 
     def test_suffixal_parses(self):
         expected_parses = {

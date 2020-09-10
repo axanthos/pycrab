@@ -571,7 +571,7 @@ class Morphology(object):
         # Count words.
         word_counts = collections.Counter(wordlist)
 
-        # Find suffixal signatures based on words (stored in word_counts).
+        # Find signatures based on words (stored in word_counts).
         self.find_signatures1(word_counts, min_stem_len, min_num_stems,
                               affix_side)
 
