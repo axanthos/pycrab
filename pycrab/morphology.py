@@ -66,7 +66,90 @@ class Morphology(object):
     are suffixal and prefixal parses.
 
     Examples:
+    
+    In general, the user will want to learn a morphology based on some data, 
+    which can be stored in a text file, a string, or a list of words:
+    
         >>> import pycrab
+        >>> morphology = pycrab.Morphology()
+        >>> morphology.learn_from_file(path_to_text_file)
+        >>> morphology.learn_from_string("some text data")
+        >>> morphology.learn_from_word_list(["a", "list", "of", "words"])
+        
+    All of these learning methods share the following optional arguments: 
+    
+    * "lowercase_input" indicates whether the input words should be lowercased
+      (defaults to True)
+      
+    * "min_stem_len" specifies the minimum number of letters that a stem can 
+      contain (defaults to 2)
+      
+    * "min_num_stems" specifies the minimum number of stems for creating a 
+      signature (defaults to 2)
+      
+    * "affix_side" indicates whether the learning process should build suffixal
+      signatures of prefixal signatures (defaults to "suffix")
+     
+    Some of these learning methods have optional arguments of their own: 
+    learn_from_file can take an "encoding" argument which defaults to "utf8", 
+    and learn_from_string can take a "tokenization_regex" argument which 
+    defaults to r"\w+(?u)".      
+
+    There are mostly two ways of viewing the contents of a morphology once it 
+    has been been learnt. The serialize() method offers a synthetic view of
+    the morphology, while the serialize_signatures() method displays the 
+    details of all signatures. Both methods can take an optional "affix_side" 
+    argument which defaults to "suffix" and indicates whether suffixal or 
+    prefixal signatures should be displayed
+
+        >>> print(morphology.serialize())
+        Number of stems:                                       8
+        Number of signatures:                                  2
+        Number of singleton signatures (one stem):             0
+        Number of doubleton signatures (two stems):            2
+        Total number of letters in stems                      27
+        Total number of affix letters                          9
+        Total number of letters in signatures                 20
+
+        ------------------------------------------------------------------------------------------------------------
+        Signature     Stem count   Robustness   Proportion of robustness   Running sum   Edge entropy   Example stem
+        ------------------------------------------------------------------------------------------------------------
+        NULL=ed=ing            2           19                      0.703         0.703            1.0   add
+        ied=y                  2            8                      0.296           1.0            0.0   cr
+
+        >>> print(morphology.serialize_signatures())
+        ================================================== NULL=ed=ing
+
+        add     want
+        ------------------------
+        add  2     want 1
+        ------------------------
+
+            Letters in words if unanalyzed:         31
+                       Letters as analyzed:         12
+
+        Final stem letter entropy: 1.000
+
+        Number of stems: 2
+
+        ================================================== ied=y
+
+        cr    dr
+        ------------------------
+        cr 1     dr 1
+        ------------------------
+
+            Letters in words if unanalyzed:         16
+                       Letters as analyzed:          8
+
+        Final stem letter entropy: 0.000
+
+        Number of stems: 2
+
+        Lower level methods and attributes are available for users interested
+        in developing learning algorithms (or, more generally, needing more
+        fine-grained control over a morpology).
+        
         >>> morphology = pycrab.Morphology(
         ...     suffixal_signatures={
         ...         pycrab.Signature(
@@ -104,52 +187,9 @@ class Morphology(object):
         >>> morphology.prefixal_parses
         {(NULL, 'create'), ('re', 'make'), ('un', 'wind'), ('re', 'do'),
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
-        >>> print(morphology.serialize())   # possible arg. affix_side='prefix'
-        Number of stems:                                       8
-        Number of signatures:                                  2
-        Number of singleton signatures (one stem):             0
-        Number of doubleton signatures (two stems):            2
-        Total number of letters in stems                      27
-        Total number of affix letters                          9
-        Total number of letters in signatures                 20
-
-        ------------------------------------------------------------------------------------------------------------
-        Signature     Stem count   Robustness   Proportion of robustness   Running sum   Edge entropy   Example stem
-        ------------------------------------------------------------------------------------------------------------
-        NULL=ed=ing            2           19                      0.703         0.703            1.0   add
-        ied=y                  2            8                      0.296           1.0            0.0   cr
-
-        >>> print(morphology.serialize_signatures())   # or affix_side='prefix'
-        ================================================== NULL=ed=ing
-
-        add     want
-        ------------------------
-        add  2     want 1
-        ------------------------
-
-            Letters in words if unanalyzed:         31
-                       Letters as analyzed:         12
-
-        Final stem letter entropy: 1.000
-
-        Number of stems: 2
-
-        ================================================== ied=y
-
-        cr    dr
-        ------------------------
-        cr 1     dr 1
-        ------------------------
-
-            Letters in words if unanalyzed:         16
-                       Letters as analyzed:          8
-
-        Final stem letter entropy: 0.000
-
-        Number of stems: 2
 
     Todo:
-        - add min_stem_length constraint? in build_signatures?
+        - add min_stem_length constraint in build_signatures?
 
     """
 
@@ -560,8 +600,6 @@ class Morphology(object):
 
         Returns: nothing.
 
-        Todo: test.
-
         """
 
         # Lowercase words if needed...
@@ -599,8 +637,6 @@ class Morphology(object):
 
         Returns: nothing.
 
-        Todo: test.
-
         """
 
         # Split content into words...
@@ -634,8 +670,6 @@ class Morphology(object):
                 "prefix".
 
         Returns: nothing.
-
-        Todo: test.
 
         """
 
