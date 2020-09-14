@@ -103,11 +103,11 @@ class Morphology(object):
     prefixal signatures should be displayed
 
         >>> print(morphology.serialize())
-        Number of stems:                                       8
+        Number of stems:                                       4
         Number of signatures:                                  2
         Number of singleton signatures (one stem):             0
         Number of doubleton signatures (two stems):            2
-        Total number of letters in stems                      27
+        Total number of letters in stems                      11
         Total number of affix letters                          9
         Total number of letters in signatures                 20
 
@@ -174,8 +174,10 @@ class Morphology(object):
         ...         ),
         ...     },
         ... )
-        >>> morphology.stems
-        {'want', 'dr', 'add', 'do', 'cr', 'wind', 'create', 'make'}
+        >>> morphology.suffixal_stems
+        {'want', 'dr', 'add', 'cr'}
+        >>> morphology.prefixal_stems
+        {'do', 'wind', 'create', 'make'}
         >>> morphology.suffixes
         {NULL, 'ing', 'ed', 'y', 'ied'}
         >>> morphology.prefixes
@@ -189,6 +191,7 @@ class Morphology(object):
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
     Todo:
+        - store word_counts and protostems
         - add min_stem_length constraint in build_signatures?
 
     """
@@ -243,15 +246,17 @@ class Morphology(object):
         if affix_side == "suffix":
             signatures = self.suffixal_signatures
             affixes = self.suffixes
+            stems = self.suffixal_stems
         else:
             signatures = self.prefixal_signatures
             affixes = self.prefixes
+            stems = self.prefixal_stems
 
         # TODO: Number of words (corpus count)?
         # TODO: Total letter count in words?
 
         # Number of stems.
-        lines.append("%-45s %10i" % ("Number of stems:", len(self.stems)))
+        lines.append("%-45s %10i" % ("Number of stems:", len(stems)))
 
         # Number of signatures.
         lines.append("%-45s %10i" % ("Number of signatures:", len(signatures)))
@@ -275,7 +280,7 @@ class Morphology(object):
         # Total number of letters in stems.
         lines.append("%-45s %10i" % (
             "Total number of letters in stems",
-            sum(len(stem) for stem in self.stems),
+            sum(len(stem) for stem in stems),
         ))
 
         # Total number of affix letters.
@@ -384,8 +389,8 @@ class Morphology(object):
         return "\n".join(lines)
 
     @property
-    def stems(self):
-        """Construct a set of stems based on all signatures.
+    def suffixal_stems(self):
+        """Construct a set of stems based on all suffixal signatures.
 
         Args:
             none.
@@ -395,8 +400,40 @@ class Morphology(object):
 
         """
 
+        return self._get_stems()
+
+    @property
+    def prefixal_stems(self):
+        """Construct a set of stems based on all prefixal signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        return self._get_stems(affix_side="prefix")
+
+    def _get_stems(self, affix_side="suffix"):
+        """Construct a set of stems based on all signatures of a given type.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of strings.
+
+        """
+
         stems = set()
-        for signature in self.suffixal_signatures | self.prefixal_signatures:
+        if affix_side == "suffix":
+            signatures = self.suffixal_signatures
+        else:
+            signatures = self.prefixal_signatures
+        for signature in signatures:
             stems.update(signature.stems)
         return stems
 

@@ -112,10 +112,13 @@ class TestMorphology(TestCase):
         )
         self.assertTrue(self.morphology != other_morphology)
 
-    def test_stems(self):
-        expected_stems = {"want", "add", "dr", "cr",
-                          "create", "wind", "make", "do"}
-        self.assertEqual(self.morphology.stems, expected_stems)
+    def test_suffixal_stems(self):
+        expected_stems = {"want", "add", "dr", "cr"}
+        self.assertEqual(self.morphology.suffixal_stems, expected_stems)
+
+    def test_prefixal_stems(self):
+        expected_stems = {"create", "wind", "make", "do"}
+        self.assertEqual(self.morphology.prefixal_stems, expected_stems)
 
     def test_suffixes(self):
         expected_suffixes = {morphology.NULL_AFFIX, "ed", "ing", "y", "ied"}
@@ -126,7 +129,7 @@ class TestMorphology(TestCase):
         self.assertEqual(self.morphology.prefixes, expected_prefixes)
 
     @patch('pycrab.Morphology.find_signatures1')
-    def test_mock_learn_from_wordlist_lower(self, mock_find_signatures1):
+    def test_learn_from_wordlist_lower(self, mock_find_signatures1):
         my_morphology = morphology.Morphology()
         wordlist = ["Test", "data", "test"]
         wordlist_lower = [word.lower() for word in wordlist]
@@ -135,7 +138,7 @@ class TestMorphology(TestCase):
                                                  "prefix")
 
     @patch('pycrab.Morphology.find_signatures1')
-    def test_mock_learn_from_wordlist_not_lower(self, mock_find_signatures1):
+    def test_learn_from_wordlist_not_lower(self, mock_find_signatures1):
         my_morphology = morphology.Morphology()
         wordlist = ["Test", "data", "test"]
         my_morphology.learn_from_wordlist(wordlist, False, 1, 1, "prefix")
