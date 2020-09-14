@@ -191,7 +191,7 @@ class Morphology(object):
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
     Todo:
-        - store word_counts and protostems
+        - store protostems
         - add min_stem_length constraint in build_signatures?
 
     """
@@ -562,6 +562,9 @@ class Morphology(object):
         """
 
         protostems = set()
+        
+        # Store word counts as attribute.
+        self.word_counts = word_counts
 
         # Select affix side...
         if affix_side == "suffix":
