@@ -14,7 +14,7 @@ from __future__ import division
 from __future__ import print_function
 
 from io import open
-from builtins import range
+from builtins import range, dict
 import collections
 import itertools
 import re
@@ -66,40 +66,40 @@ class Morphology(object):
     are suffixal and prefixal parses.
 
     Examples:
-    
-    In general, the user will want to learn a morphology based on some data, 
+
+    In general, the user will want to learn a morphology based on some data,
     which can be stored in a text file, a string, or a list of words:
-    
+
         >>> import pycrab
         >>> morphology = pycrab.Morphology()
         >>> morphology.learn_from_file(path_to_text_file)
         >>> morphology.learn_from_string("some text data")
         >>> morphology.learn_from_word_list(["a", "list", "of", "words"])
-        
-    All of these learning methods share the following optional arguments: 
-    
+
+    All of these learning methods share the following optional arguments:
+
     * "lowercase_input" indicates whether the input words should be lowercased
       (defaults to True)
-      
-    * "min_stem_len" specifies the minimum number of letters that a stem can 
+
+    * "min_stem_len" specifies the minimum number of letters that a stem can
       contain (defaults to 2)
-      
-    * "min_num_stems" specifies the minimum number of stems for creating a 
+
+    * "min_num_stems" specifies the minimum number of stems for creating a
       signature (defaults to 2)
-      
+
     * "affix_side" indicates whether the learning process should build suffixal
       signatures of prefixal signatures (defaults to "suffix")
-     
-    Some of these learning methods have optional arguments of their own: 
-    learn_from_file can take an "encoding" argument which defaults to "utf8", 
-    and learn_from_string can take a "tokenization_regex" argument which 
-    defaults to r"\w+(?u)".      
 
-    There are mostly two ways of viewing the contents of a morphology once it 
+    Some of these learning methods have optional arguments of their own:
+    learn_from_file can take an "encoding" argument which defaults to "utf8",
+    and learn_from_string can take a "tokenization_regex" argument which
+    defaults to r"\w+(?u)".
+
+    There are mostly two ways of viewing the contents of a morphology once it
     has been been learnt. The serialize() method offers a synthetic view of
-    the morphology, while the serialize_signatures() method displays the 
-    details of all signatures. Both methods can take an optional "affix_side" 
-    argument which defaults to "suffix" and indicates whether suffixal or 
+    the morphology, while the serialize_signatures() method displays the
+    details of all signatures. Both methods can take an optional "affix_side"
+    argument which defaults to "suffix" and indicates whether suffixal or
     prefixal signatures should be displayed
 
         >>> print(morphology.serialize())
@@ -149,7 +149,7 @@ class Morphology(object):
         Lower level methods and attributes are available for users interested
         in developing learning algorithms (or, more generally, needing more
         fine-grained control over a morpology).
-        
+
         >>> morphology = pycrab.Morphology(
         ...     suffixal_signatures={
         ...         pycrab.Signature(
@@ -191,8 +191,10 @@ class Morphology(object):
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
     Todo:
+        - check meaning of "total letter count in words" etc. in serialize()
         - store protostems
         - add min_stem_length constraint in build_signatures?
+        - find better names for serialization methods?
 
     """
 
@@ -245,15 +247,32 @@ class Morphology(object):
         # Select affix side.
         if affix_side == "suffix":
             signatures = self.suffixal_signatures
+            if not signatures:
+                return("Morphology contains no suffixal signatures.")
             affixes = self.suffixes
             stems = self.suffixal_stems
         else:
             signatures = self.prefixal_signatures
+            if not signatures:
+                return("Morphology contains no prefixal signatures.")
             affixes = self.prefixes
             stems = self.prefixal_stems
 
-        # TODO: Number of words (corpus count)?
-        # TODO: Total letter count in words?
+        try:
+            # Number of words.
+            lines.append("%-45s %10i" % (
+                "Number of words (corpus count):",
+                sum(v for v in self.word_counts.values())
+            ))
+
+            # Total letter count in words.
+            lines.append("%-45s %10i" % (
+                "Total letter count in words:",
+                sum(len(word) for word in self.word_counts)
+            ))
+        except AttributeError:
+            lines.append("%-54s 0" % "Number of words (corpus count):")
+            lines.append("%-54s 0" % "Total letter count in words:")
 
         # Number of stems.
         lines.append("%-45s %10i" % ("Number of stems:", len(stems)))
@@ -299,8 +318,15 @@ class Morphology(object):
             num_letters,
         ))
 
-        # TODO: Number of analyzed words?
-        # TODO: Total number of letters in analyzed words?
+        # Number of analyzed words...
+        parses = self._get_parses(affix_side)
+        lines.append("%-45s %10i" % ("Number of analyzed words:", len(parses)))
+
+        # Total number of letters in analyzed words.
+        lines.append("%-45s %10i" % (
+            "Total number of letters in analyzed words:",
+            sum(len(parse[0]) + len(parse[1]) for parse in parses),
+        ))
 
         lines.append("")
 
@@ -542,6 +568,51 @@ class Morphology(object):
             parses.update(signature.parses)
         return parses
 
+    def build_signatures(self, parses, affix_side="suffix",
+                         min_num_stems=MIN_NUM_STEMS):
+        """Construct all signatures of a given type based on a set of parses.
+
+        Args:
+            parses (set): pairs (prefix, stem) or (stem, suffix), depending on
+                affix_side arg.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+            min_num_stems (int, optional): minimum number of stems required in
+                a signature (default is MIN_NUM_STEMS).
+
+        Returns:
+            number of signatures constructed (int).
+
+        """
+
+        # List all possible affixes of each stem...
+        affixes = collections.defaultdict(list) # TODO: set instead of list?
+        if affix_side == "suffix":
+            for stem, suffix in parses:
+                affixes[stem].append(suffix)
+        else:
+            for prefix, stem in parses:
+                affixes[stem].append(prefix)
+
+        # Find all stems associated with each affix list...
+        stem_sets = collections.defaultdict(set)
+        for stem, affixes in affixes.items():
+            stem_sets[tuple(sorted(affixes))].add(stem)
+
+        # Build signatures based on sets of stems associated with affixes...
+        signatures = set()
+        for affixes, stems in stem_sets.items():
+            if len(stems) >= min_num_stems:     # Require min number of stems.
+                signatures.add(Signature(stems, affixes, affix_side))
+
+        # Update set of signatures of required type...
+        if affix_side == "suffix":
+            self.suffixal_signatures = signatures
+        else:
+            self.prefixal_signatures = signatures
+
+        return len(signatures)
+
     def find_signatures1(self, word_counts, min_stem_len=MIN_STEM_LEN,
                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Find initial signatures (using Goldsmith's Lxa-Crab algorithm).
@@ -562,13 +633,13 @@ class Morphology(object):
         """
 
         protostems = set()
-        
+
         # Store word counts as attribute.
         self.word_counts = word_counts
 
         # Select affix side...
         if affix_side == "suffix":
-            signatures = self.suffixal_signatures        
+            signatures = self.suffixal_signatures
             sorted_words = sorted(list(word_counts))
         else:
             signatures = self.prefixal_signatures
@@ -598,7 +669,7 @@ class Morphology(object):
         # For each continuation lists with min_num_stems stems or more...
         for continuations, protostems in protostem_lists.items():
             if len(protostems) >= min_num_stems:
-            
+
                 # If affix side is prefix, reverse stems and continuations...
                 if affix_side == "prefix":
                     protostems = [protostem[::-1] for protostem in protostems]
@@ -607,19 +678,19 @@ class Morphology(object):
                 # Replace empty affix with NULL_AFFIX.
                 continuations = [cont if len(cont) else NULL_AFFIX
                                  for cont in continuations]
-                                
-                # Get stem and continuation counts...                 
+
+                # Get stem and continuation counts...
                 protostem_counts = collections.Counter()
                 continuation_counts = collections.Counter()
-                for protostem in protostems:     
+                for protostem in protostems:
                     for continuation in continuations:
                         word_count = word_counts[protostem + continuation]
                         protostem_counts[protostem] += word_count
                         continuation_counts[continuation] += word_count
-                        
+
                 # Create and store signature.
                 signatures.add(Signature(stems=protostem_counts,
-                                         affixes=continuation_counts, 
+                                         affixes=continuation_counts,
                                          affix_side=affix_side))
 
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
@@ -723,51 +794,6 @@ class Morphology(object):
                                    min_num_stems, affix_side)
         except IOError:
             print("Couldn't read file ", input_file_path)
-
-    def build_signatures(self, parses, affix_side="suffix",
-                         min_num_stems=MIN_NUM_STEMS):
-        """Construct all signatures of a given type based on a set of parses.
-
-        Args:
-            parses (set): pairs (prefix, stem) or (stem, suffix), depending on
-                affix_side arg.
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-            min_num_stems (int, optional): minimum number of stems required in
-                a signature (default is MIN_NUM_STEMS).
-
-        Returns:
-            number of signatures constructed (int).
-
-        """
-
-        # List all possible affixes of each stem...
-        affixes = collections.defaultdict(list) # TODO: set instead of list?
-        if affix_side == "suffix":
-            for stem, suffix in parses:
-                affixes[stem].append(suffix)
-        else:
-            for prefix, stem in parses:
-                affixes[stem].append(prefix)
-
-        # Find all stems associated with each affix list...
-        stem_sets = collections.defaultdict(set)
-        for stem, affixes in affixes.items():
-            stem_sets[tuple(sorted(affixes))].add(stem)
-
-        # Build signatures based on sets of stems associated with affixes...
-        signatures = set()
-        for affixes, stems in stem_sets.items():
-            if len(stems) >= min_num_stems:     # Require min number of stems.
-                signatures.add(Signature(stems, affixes, affix_side))
-
-        # Update set of signatures of required type...
-        if affix_side == "suffix":
-            self.suffixal_signatures = signatures
-        else:
-            self.prefixal_signatures = signatures
-
-        return len(signatures)
 
     def _add_test_signatures(self):
         """"Add signatures to morphology for testing purposes."""
