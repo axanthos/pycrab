@@ -844,7 +844,7 @@ class Signature(tuple):
         >>> sig.stems
         {'want': 2, 'add': 1}
         >>> sig.example_stem
-        'add'
+        'want'
         >>> sig.affixes
         {'ing': 8, NULL: 6, 'ed': 6}
         >>> sig.affix_string

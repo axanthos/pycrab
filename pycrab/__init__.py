@@ -21,6 +21,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from pycrab.morphology import Morphology, Signature, NULL_AFFIX
+
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
 __credits__ = ["John Goldsmith", "Aris Xanthos"]
@@ -29,5 +31,3 @@ __version__ = "0.1"
 __maintainer__ = "Aris Xanthos"
 __email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
-
-from pycrab.morphology import Morphology, Signature, NULL_AFFIX

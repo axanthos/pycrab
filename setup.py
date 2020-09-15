@@ -81,4 +81,7 @@ setup(
     install_requires=INSTALL_REQUIRES,
     test_suite='nose.collector',
     tests_require=['nose'],
+    entry_points = {
+        'console_scripts': ['pycrab=pycrab.command_line:main'],
+    }
 )
