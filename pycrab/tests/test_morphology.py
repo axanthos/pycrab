@@ -99,6 +99,36 @@ class TestMorphology(TestCase):
             ),
         )
         self.assertTrue(self.morphology != other_morphology)
+        
+    def test_get_suffixal_signatures(self):
+        expected_signatures = [
+            morphology.Signature(
+                stems=["want", "add", "add"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            ),
+        ]
+        self.assertTrue(self.morphology.get_signatures() 
+                        == expected_signatures)
+
+    def test_get_prefixal_signatures(self):
+        expected_signatures = [
+            morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
+        ]
+        self.assertTrue(self.morphology.get_signatures(affix_side="prefix") 
+                        == expected_signatures)
 
     def test_suffixal_stems(self):
         expected_stems = {"want", "add", "dr", "cr"}

@@ -202,15 +202,21 @@ class Morphology(object):
 
         """
 
-        self.signatures = dict()
+        self.prefixal_signatures = dict()
+        self.suffixal_signatures = dict()
         for signature in signatures:
-            self.signatures[signature.affix_string] = signature
+            if signature.affix_side == "prefix":
+                self.prefixal_signatures[signature.affix_string] = signature
+            else:
+                self.suffixal_signatures[signature.affix_string] = signature
 
     def __eq__(self, other_morphology):
         """Tests for morphology equality."""
         if not isinstance(other_morphology, type(self)):
             return False
-        if other_morphology.signatures != self.signatures:
+        if other_morphology.suffixal_signatures != self.suffixal_signatures:
+            return False
+        if other_morphology.prefixal_signatures != self.prefixal_signatures:
             return False
         return True
 
@@ -228,12 +234,36 @@ class Morphology(object):
         Returns:
             list of signatures.
 
+        """
+
+        if affix_side == "prefix":
+            return list(self.prefixal_signatures.values())
+        else:
+            return list(self.suffixal_signatures.values())
+
+    def get_signature(self, affix_string, affix_side="suffix"):
+        """Returns the Signature object corresponding to a given affix string.
+
+        Args:
+            affix_string (string): the affix string of the requested signature.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            a Signature object.
+            
         Todo: test
 
         """
 
-        return [signature for signature in self.signatures.values()
-                if signature.affix_side == affix_side]
+        try:
+            if affix_side == "prefix":
+                return self.prefixal_signatures[affix_string]
+            else:
+                return self.suffixal_signatures[affix_string]
+        except KeyError:
+            raise ValueError("No %sal signature matches the requested "
+                             + "affix string " % affix_side)
 
     def add_signature(self, stems, affixes, affix_side="prefix"):
         """Adds a signature to the morphology.
@@ -255,7 +285,11 @@ class Morphology(object):
 
         """
         signature = Signature(stems, affixes, affix_side)
-        self.signatures[signature.affix_string] = signature
+        if affix_side == "prefix":
+            self.prefixal_signatures[signature.affix_string] = signature
+        else:
+            self.suffixal_signatures[signature.affix_string] = signature
+
 
     def serialize(self, affix_side="suffix"):
         """Formats the morphology for synthetic display.
@@ -618,9 +652,14 @@ class Morphology(object):
                 signatures.add(Signature(stems, affixes, affix_side))
 
         # Update dict of signatures in morphology...
-        self.signatures = dict()
-        for signature in signatures:
-            self.signatures[signature.affix_string] = signature
+        if affix_side == "prefix":
+            self.prefixal_signatures = dict()
+            for signature in signatures:
+                self.prefixal_signatures[signature.affix_string] = signature
+        else:
+            self.suffixal_signatures = dict()
+            for signature in signatures:
+                self.suffixal_signatures[signature.affix_string] = signature
 
         return len(signatures)
 
