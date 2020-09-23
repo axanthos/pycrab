@@ -100,6 +100,53 @@ class TestMorphology(TestCase):
         )
         self.assertTrue(self.morphology != other_morphology)
         
+    def test_add_prefixal_signature(self):
+        signature = morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+        )
+        other_morphology = morphology.Morphology()
+        other_morphology.add_signature(signature.stems, signature.affixes, 
+                                       affix_side="prefix")
+        self.assertTrue(other_morphology.get_signature(signature.affix_string,
+                        affix_side="prefix") == signature)
+        
+    def test_add_suffixal_signature(self):
+        signature = morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+        )
+        other_morphology = morphology.Morphology()
+        other_morphology.add_signature(signature.stems, signature.affixes)
+        self.assertTrue(other_morphology.get_signature(signature.affix_string) 
+                        == signature)
+
+        
+    def test_get_prefixal_signature(self):
+        signature = morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+        )
+        other_morphology = morphology.Morphology(signature)
+        affix_string = "ied=y".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(other_morphology.get_signature(affix_string) 
+                        == signature)
+
+    def test_get_suffixal_signature(self):
+        signature = morphology.Signature(
+            stems=["do", "wind"],
+            affixes=["un", "re"],
+            affix_side="prefix",
+        )
+        other_morphology = morphology.Morphology(signature)
+        affix_string = "re=un".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(other_morphology.get_signature(affix_string, 
+                        affix_side="prefix") == signature)
+
+    def test_get_signature_raises_value_error(self):
+        self.assertRaises(ValueError, self.morphology.get_signature, "dummy")
+
     def test_get_suffixal_signatures(self):
         expected_signatures = [
             morphology.Signature(

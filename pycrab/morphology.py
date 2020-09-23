@@ -251,9 +251,11 @@ class Morphology(object):
 
         Returns:
             a Signature object.
-            
-        Todo: test
-
+        
+        Raises:
+            ValueError: If there is no signature of the requested type matching
+                the requested affix string.
+        
         """
 
         try:
@@ -262,10 +264,10 @@ class Morphology(object):
             else:
                 return self.suffixal_signatures[affix_string]
         except KeyError:
-            raise ValueError("No %sal signature matches the requested "
-                             + "affix string " % affix_side)
+            raise ValueError(("No %sal signature matches the requested "
+                              + "affix string") % affix_side)
 
-    def add_signature(self, stems, affixes, affix_side="prefix"):
+    def add_signature(self, stems, affixes, affix_side="suffix"):
         """Adds a signature to the morphology.
 
         Signatures are stored in a dict, where the key is the signature's
@@ -289,7 +291,6 @@ class Morphology(object):
             self.prefixal_signatures[signature.affix_string] = signature
         else:
             self.suffixal_signatures[signature.affix_string] = signature
-
 
     def serialize(self, affix_side="suffix"):
         """Formats the morphology for synthetic display.
