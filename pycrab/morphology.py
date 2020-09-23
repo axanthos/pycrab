@@ -283,9 +283,8 @@ class Morphology(object):
 
         Returns: nothing.
 
-        Todo: test
-
         """
+
         signature = Signature(stems, affixes, affix_side)
         if affix_side == "prefix":
             self.prefixal_signatures[signature.affix_string] = signature
@@ -1161,18 +1160,25 @@ class Family(object):
     nucleus. Affixes contained in the superset signatures but not in the
     nucleus are called satellite affixes.
 
-    Examples:
-        TODO
+    Todo:
+        Examples
+        Tests
 
     """
 
-    def __init__(self):
+    def __init__(self, nucleus, children=None, affix_side="suffix"):
         """__init__ method for class Family.
 
         Args:
-            TODO
+            nucleus (string): affix string of the family's nucleus signature.
+            children (iterable of signatures, optional): signatures that
+                 contain the family's nucleus (defaults to empty set).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
 
         """
-        pass
+        self.nucleus = nucleus
+        self.children = set(children)
+        self.affix_side = affix_side
 
 
