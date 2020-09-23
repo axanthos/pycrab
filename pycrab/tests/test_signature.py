@@ -43,7 +43,8 @@ class TestSignature(TestCase):
         self.assertEqual(self.signature.get_edge_entropy(), 1.0)
 
     def test_get_edge_entropy_several_letters(self):
-        signature = morphology.Signature(stems=["prey", "pray"])
+        signature = morphology.Signature(stems=["prey", "pray"], 
+                                         affixes=[morphology.NULL_AFFIX])
         self.assertEqual(signature.get_edge_entropy(num_letters=3), 1.0)
 
     def test_get_edge_entropy_raises_value_error(self):
