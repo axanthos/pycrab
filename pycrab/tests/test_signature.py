@@ -80,6 +80,14 @@ class TestSignature(TestCase):
         )
         self.assertTrue(self.signature != other_signature)
 
+    def test_signature_contains(self):
+        affix_string = "NULL=ed".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(self.signature.contains(affix_string))
+
+    def test_signature_contains_not(self):
+        affix_string = "NULL=es".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(not self.signature.contains(affix_string))
+
     def test_suffixal_parses(self):
         expected_parses = {
             ("want", morphology.NULL_AFFIX),
