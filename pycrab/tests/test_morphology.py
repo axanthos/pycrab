@@ -177,6 +177,23 @@ class TestMorphology(TestCase):
         self.assertTrue(self.morphology.get_signatures(affix_side="prefix") 
                         == expected_signatures)
 
+    def test_get_shadow_signatures(self):
+        my_morphology = morphology.Morphology(
+            morphology.Signature(
+                stems=["chang"],
+                affixes=["e", "ed", "es", "ing"],
+            ),
+            morphology.Signature(
+                stems=["structural"],
+                affixes=["ism", "ist"],
+            ),
+        )
+        expected_affix_strings = {s.replace("=", morphology.AFFIX_DELIMITER)
+                                  for s in ["NULL=d=s", "m=t"]}
+        print(my_morphology.get_shadow_signatures(), expected_affix_strings)
+        self.assertTrue(my_morphology.get_shadow_signatures() 
+                        == expected_affix_strings)
+
     def test_suffixal_stems(self):
         expected_stems = {"want", "add", "dr", "cr"}
         self.assertEqual(self.morphology.suffixal_stems, expected_stems)

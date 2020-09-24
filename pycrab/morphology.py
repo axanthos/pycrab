@@ -394,9 +394,13 @@ class Morphology(object):
         # Compute first and last column header length...
         max_affix_str_len = max(len(sig.affix_string) for sig in signatures)
         first_col_len = max(max_affix_str_len, len("Signature"))
+        first_col_len += 2  # For potential shadow signatures...
         max_example_stem_len = max(len(sig.example_stem) for sig in signatures)
         last_col_len = max(max_example_stem_len, len("Example stem"))
-
+        
+        # Get list of shadow signatures.
+        shadow_signatures = self.get_shadow_signatures(affix_side)
+        
         # Define headers and corresponding content formats...
         headers = [
             "Stem count",
@@ -406,11 +410,11 @@ class Morphology(object):
             "Edge entropy",
         ]
         formats = [
-            "%{}s",
-            "%{}s",
-            "%{}.5s",
-            "%{}.5s",
-            "%{}.4s",
+            "%{}i",
+            "%{}i",
+            "%{}.3f",
+            "%{}.3f",
+            "%{}.2f",
         ]
 
         # Construct header row...
@@ -439,7 +443,10 @@ class Morphology(object):
                 running_sum,
                 signature.get_edge_entropy(),
             ]
-            val_len_formats = [(signature.affix_string, first_col_len, "%-{}s")]
+            affix_string = signature.affix_string
+            if affix_string in shadow_signatures:
+                affix_string = "[" + affix_string + "]"
+            val_len_formats = [(affix_string, first_col_len, "%-{}s")]
             val_len_formats.extend((vals[idx], len(headers[idx]), formats[idx])
                                     for idx in range(len(headers)))
             val_len_formats.append((signature.example_stem,
@@ -614,6 +621,27 @@ class Morphology(object):
             parses.update(signature.parses)
         return parses
 
+    def get_shadow_signatures(self, affix_side="suffix"):
+        """Compute the set of shadow signatures of a given type.
+        
+        Shadow signatures are potentially spurious signatures that pycrab's
+        learning algorithm discovers as a consequence of having discovered 
+        another signature which has two or more affixes starting with the same
+        letter or sequence of letters.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of shadow signatures.
+
+        """
+        shadow_signatures = set()
+        for signature in self.get_signatures(affix_side):
+            shadow_signatures.update(signature.casted_shadow_signatures)
+        return shadow_signatures
+
     def build_signatures(self, parses, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
         """Construct all signatures of a given type based on a set of parses.
@@ -691,8 +719,10 @@ class Morphology(object):
         signatures = self.get_signatures(affix_side)
         if affix_side == "suffix":
             sorted_words = sorted(list(word_counts))
+            self.suffixal_signatures = dict()
         else:
             sorted_words = sorted(word[::-1] for word in word_counts)
+            self.prefixal_signatures = dict()
 
         # For each pair of successive words (in alphabetical order)...
         for idx in range(len(sorted_words)-1):
@@ -1150,6 +1180,57 @@ class Signature(tuple):
                                  "calculation")
         counts = collections.Counter(stem[-num_letters:] for stem in self.stems)
         return pycrab.utils.entropy(counts)
+
+    @cached_property
+    def casted_shadow_signatures(self):
+        """Compute the set of shadow signatures casted by this signature.
+        
+        Shadow signatures are potentially spurious signatures that pycrab's
+        learning algorithm discovers as a consequence of having discovered 
+        another signature which has two or more affixes starting with the same
+        letter or sequence of letters.
+
+        Args: none.
+
+        Returns:
+            set of casted shadow signatures.
+
+        """
+        return self._compute_casted_shadow_signatures()
+
+    def _compute_casted_shadow_signatures(self):
+        """Compute the set of shadow signatures casted by this signature.
+        
+        Shadow signatures are potentially spurious signatures that pycrab's
+        learning algorithm discovers as a consequence of having discovered 
+        another signature which has two or more affixes starting with the same
+        letter or sequence of letters.
+
+        Args: none.
+
+        Returns:
+            set of casted shadow signatures.
+
+        """
+        casted_signatures = set()
+        for pos in range(max(len(affix) for affix in self.affixes)):
+            affix_beginnings = set(affix[0:pos] for affix in self.affixes
+                                   if len(affix) > pos)
+            for affix_beginning in affix_beginnings:
+                letter_types_at_pos = set()
+                considered_affixes = [affix for affix in self.affixes
+                                     if affix.startswith(affix_beginning)
+                                     and len(affix) > pos]
+                letter_types_at_pos = set(affix[pos] 
+                                          for affix in considered_affixes)
+                if affix_beginning in self.affixes:
+                    considered_affixes.append(NULL_AFFIX)
+                    letter_types_at_pos.add(str(NULL_AFFIX))
+                if len(letter_types_at_pos) == len(considered_affixes) > 1:
+                    casted_signatures.add(AFFIX_DELIMITER.join(l for l in 
+                                          sorted(letter_types_at_pos)))
+        return casted_signatures
+            
 
 
 class Family(object):
