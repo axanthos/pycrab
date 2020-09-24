@@ -41,6 +41,13 @@ MIN_NUM_STEMS = 2
 MIN_STEM_LEN = 2
 """Module-level constant for the min number of letters in a stem."""
 
+NUM_SEED_FAMILIES = 30
+"""Module-level constant for the number of seed families to create."""
+
+MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION = 0     # TODO: sensible default?
+"""Module-level constant for the minimal robustness required for a signature
+to be considered for inclusion in a family."""
+
 AFFIX_DELIMITER = "="
 """Module-level constant for the delimiter symbol in affix strings."""
 
@@ -151,28 +158,24 @@ class Morphology(object):
         fine-grained control over a morpology).
 
         >>> morphology = pycrab.Morphology(
-        ...     suffixal_signatures={
-        ...         pycrab.Signature(
-        ...             stems=["want", "add", "add"],
-        ...             affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
-        ...         ),
-        ...         pycrab.Signature(
-        ...             stems=["cr", "dr"],
-        ...             affixes=["y", "ied"],
-        ...         ),
-        ...     },
-        ...     prefixal_signatures={
-        ...         pycrab.Signature(
-        ...             stems=["do", "wind"],
-        ...             affixes=["un", "re"],
-        ...             affix_side="prefix",
-        ...         ),
-        ...         pycrab.Signature(
-        ...             stems=["make", "create"],
-        ...             affixes=["re", pycrab.NULL_AFFIX],
-        ...             affix_side="prefix",
-        ...         ),
-        ...     },
+        ...     pycrab.Signature(
+        ...         stems=["want", "add", "add"],
+        ...         affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
+        ...     ),
+        ...     pycrab.Signature(
+        ...         stems=["cr", "dr"],
+        ...         affixes=["y", "ied"],
+        ...     ),
+        ...     pycrab.Signature(
+        ...         stems=["do", "wind"],
+        ...         affixes=["un", "re"],
+        ...         affix_side="prefix",
+        ...     ),
+        ... )
+        >>> morphology.add_signature(
+        ...     stems=["make", "create"],
+        ...     affixes=["re", pycrab.NULL_AFFIX],
+        ...     affix_side="prefix",
         ... )
         >>> morphology.suffixal_stems
         {'want', 'dr', 'add', 'cr'}
@@ -195,28 +198,29 @@ class Morphology(object):
         - store protostems
         - add min_stem_length constraint in build_signatures?
         - find better names for serialization methods?
+        - get_families/signatures return sets instead of lists?
+        - mirror num_seed_families and min_robustness in CLI.
+
 
     """
 
-    def __init__(self, suffixal_signatures=None, prefixal_signatures=None):
+    def __init__(self, *signatures):
         """__init__ method for class Morphology.
 
         Args:
-            suffixal_signatures (list, optional): list of suffixal signatures
-                in the morphology. Defaults to empty list.
-            prefixal_signatures (list, optional): list of prefixal signatures
-                in the morphology. Defaults to empty list.
+            *signatures (optional): comma-separated signatures
 
         """
 
-        if suffixal_signatures is None:
-            self.suffixal_signatures = set()
-        else:
-            self.suffixal_signatures = suffixal_signatures
-        if prefixal_signatures is None:
-            self.prefixal_signatures = set()
-        else:
-            self.prefixal_signatures = prefixal_signatures
+        self.prefixal_signatures = dict()
+        self.suffixal_signatures = dict()
+        for signature in signatures:
+            if signature.affix_side == "prefix":
+                self.prefixal_signatures[signature.affix_string] = signature
+            else:
+                self.suffixal_signatures[signature.affix_string] = signature
+        self.prefixal_families = set()
+        self.suffixal_families = set()
 
     def __eq__(self, other_morphology):
         """Tests for morphology equality."""
@@ -232,31 +236,116 @@ class Morphology(object):
         """Tests for morphology inequality."""
         return not self == other_morphology
 
+    def get_families(self, affix_side="suffix"):
+        """Returns the list of suffixal or prefixal families.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            list of families.
+            
+        Todo: test
+
+        """
+
+        if affix_side == "prefix":
+            return self.prefixal_families
+        else:
+            return self.suffixal_families
+
+    def get_signatures(self, affix_side="suffix"):
+        """Returns the list of suffixal or prefixal signatures.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            list of signatures.
+
+        """
+
+        if affix_side == "prefix":
+            return list(self.prefixal_signatures.values())
+        else:
+            return list(self.suffixal_signatures.values())
+
+    def get_signature(self, affix_string, affix_side="suffix"):
+        """Returns the Signature object corresponding to a given affix string.
+
+        Args:
+            affix_string (string): the affix string of the requested signature.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            a Signature object.
+
+        Raises:
+            ValueError: If there is no signature of the requested type matching
+                the requested affix string.
+
+        """
+
+        try:
+            if affix_side == "prefix":
+                return self.prefixal_signatures[affix_string]
+            else:
+                return self.suffixal_signatures[affix_string]
+        except KeyError:
+            raise ValueError(("No %sal signature matches the requested "
+                              + "affix string") % affix_side)
+
+    def add_signature(self, stems, affixes, affix_side="suffix"):
+        """Adds a signature to the morphology.
+
+        Signatures are stored in a dict, where the key is the signature's
+        affix string and the value is a Signature object.
+
+        Args:
+            stems (mapping or iterable): stems associated with this signature
+                (with counts if arg is a dict).
+            affixes (mapping or iterable): affixes associated with this
+                signature (with counts if arg is a dict).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        """
+
+        signature = Signature(stems, affixes, affix_side)
+        if affix_side == "prefix":
+            self.prefixal_signatures[signature.affix_string] = signature
+        else:
+            self.suffixal_signatures[signature.affix_string] = signature
+
     def serialize(self, affix_side="suffix"):
         """Formats the morphology for synthetic display.
+
         Args:
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
         Returns:
             String.
+
         """
 
         lines = list()
 
         # Select affix side.
-        if affix_side == "suffix":
-            signatures = self.suffixal_signatures
-            if not signatures:
-                return("Morphology contains no suffixal signatures.")
-            affixes = self.suffixes
-            stems = self.suffixal_stems
-        else:
-            signatures = self.prefixal_signatures
-            if not signatures:
-                return("Morphology contains no prefixal signatures.")
+        signatures = self.get_signatures(affix_side)
+        if not signatures:
+            return("Morphology contains no %sal signatures." % affix_side)
+        if affix_side == "prefix":
             affixes = self.prefixes
             stems = self.prefixal_stems
+        else:
+            affixes = self.suffixes
+            stems = self.suffixal_stems
 
         try:
             # Number of words.
@@ -336,8 +425,12 @@ class Morphology(object):
         # Compute first and last column header length...
         max_affix_str_len = max(len(sig.affix_string) for sig in signatures)
         first_col_len = max(max_affix_str_len, len("Signature"))
+        first_col_len += 2  # For potential shadow signatures...
         max_example_stem_len = max(len(sig.example_stem) for sig in signatures)
         last_col_len = max(max_example_stem_len, len("Example stem"))
+
+        # Get list of shadow signatures.
+        shadow_signatures = self.get_shadow_signatures(affix_side)
 
         # Define headers and corresponding content formats...
         headers = [
@@ -348,11 +441,11 @@ class Morphology(object):
             "Edge entropy",
         ]
         formats = [
-            "%{}s",
-            "%{}s",
-            "%{}.5s",
-            "%{}.5s",
-            "%{}.4s",
+            "%{}i",
+            "%{}i",
+            "%{}.3f",
+            "%{}.3f",
+            "%{}.2f",
         ]
 
         # Construct header row...
@@ -381,7 +474,10 @@ class Morphology(object):
                 running_sum,
                 signature.get_edge_entropy(),
             ]
-            val_len_formats = [(signature.affix_string, first_col_len, "%-{}s")]
+            affix_string = signature.affix_string
+            if affix_string in shadow_signatures:
+                affix_string = "[" + affix_string + "]"
+            val_len_formats = [(affix_string, first_col_len, "%-{}s")]
             val_len_formats.extend((vals[idx], len(headers[idx]), formats[idx])
                                     for idx in range(len(headers)))
             val_len_formats.append((signature.example_stem,
@@ -401,18 +497,35 @@ class Morphology(object):
 
         Returns:
             String.
+
         """
 
-        if affix_side == "suffix":
-            signatures = self.suffixal_signatures
-        else:
-            signatures = self.prefixal_signatures
+        signatures = self.get_signatures(affix_side)
+        if not signatures:
+            return("Morphology contains no %sal signatures." % affix_side)
         lines = list()
         for signature in sorted(signatures,
                                 key=lambda signature: signature.robustness,
                                 reverse=True):
             lines.append(str(signature))
         return "\n".join(lines)
+
+    def serialize_families(self, affix_side="suffix"):
+        """Formats the families for detailed display.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            String.
+
+        """
+
+        families = self.get_families(affix_side)
+        if not families:
+            return("Morphology contains no %sal families." % affix_side)
+        return "\n".join(str(family) for family in families)
 
     @property
     def suffixal_stems(self):
@@ -455,11 +568,7 @@ class Morphology(object):
         """
 
         stems = set()
-        if affix_side == "suffix":
-            signatures = self.suffixal_signatures
-        else:
-            signatures = self.prefixal_signatures
-        for signature in signatures:
+        for signature in self.get_signatures(affix_side):
             stems.update(signature.stems)
         return stems
 
@@ -504,11 +613,7 @@ class Morphology(object):
         """
 
         affixes = set()
-        if affix_side == "suffix":
-            signatures = self.suffixal_signatures
-        else:
-            signatures = self.prefixal_signatures
-        for signature in signatures:
+        for signature in self.get_signatures(affix_side):
             affixes.update(signature.affixes)
         return affixes
 
@@ -560,13 +665,30 @@ class Morphology(object):
         """
 
         parses = set()
-        if affix_side == "suffix":
-            signatures = self.suffixal_signatures
-        else:
-            signatures = self.prefixal_signatures
-        for signature in signatures:
+        for signature in self.get_signatures(affix_side):
             parses.update(signature.parses)
         return parses
+
+    def get_shadow_signatures(self, affix_side="suffix"):
+        """Compute the set of shadow signatures of a given type.
+
+        Shadow signatures are potentially spurious signatures that pycrab's
+        learning algorithm discovers as a consequence of having discovered
+        another signature which has two or more affixes starting with the same
+        letter or sequence of letters.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of shadow signatures.
+
+        """
+        shadow_signatures = set()
+        for signature in self.get_signatures(affix_side):
+            shadow_signatures.update(signature.casted_shadow_signatures)
+        return shadow_signatures
 
     def build_signatures(self, parses, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
@@ -605,11 +727,15 @@ class Morphology(object):
             if len(stems) >= min_num_stems:     # Require min number of stems.
                 signatures.add(Signature(stems, affixes, affix_side))
 
-        # Update set of signatures of required type...
-        if affix_side == "suffix":
-            self.suffixal_signatures = signatures
+        # Update dict of signatures in morphology...
+        if affix_side == "prefix":
+            self.prefixal_signatures = dict()
+            for signature in signatures:
+                self.prefixal_signatures[signature.affix_string] = signature
         else:
-            self.prefixal_signatures = signatures
+            self.suffixal_signatures = dict()
+            for signature in signatures:
+                self.suffixal_signatures[signature.affix_string] = signature
 
         return len(signatures)
 
@@ -638,12 +764,13 @@ class Morphology(object):
         self.word_counts = word_counts
 
         # Select affix side...
+        signatures = self.get_signatures(affix_side)
         if affix_side == "suffix":
-            signatures = self.suffixal_signatures
             sorted_words = sorted(list(word_counts))
+            self.suffixal_signatures = dict()
         else:
-            signatures = self.prefixal_signatures
             sorted_words = sorted(word[::-1] for word in word_counts)
+            self.prefixal_signatures = dict()
 
         # For each pair of successive words (in alphabetical order)...
         for idx in range(len(sorted_words)-1):
@@ -689,13 +816,77 @@ class Morphology(object):
                         continuation_counts[continuation] += word_count
 
                 # Create and store signature.
-                signatures.add(Signature(stems=protostem_counts,
-                                         affixes=continuation_counts,
-                                         affix_side=affix_side))
+                self.add_signature(stems=protostem_counts,
+                                   affixes=continuation_counts,
+                                   affix_side=affix_side)
+
+    def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
+                        min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
+                        affix_side="suffix"):
+        """Create families; each family has a nucleus signature, which comes
+           from the most robust signatures, and it finds other signatures which
+           are supersets of the nucleus.
+
+        Args:
+            num_seed_families (int, optional): the number of seed families to
+                create (defaults to NUM_SEED_FAMILIES).
+            min_robustness (float, optional): the minimal robustness for
+                a signature to be added to a family (defaults to
+                MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: test.
+
+        """
+
+        # Exclude shadow signatures...
+        shadow_signatures = self.get_shadow_signatures(affix_side)
+        signatures = [sig for sig in self.get_signatures(affix_side)
+                      if sig.affix_string not in shadow_signatures]
+
+        # Sort remaining signatures by decreasing robustness.
+        signatures.sort(key=lambda signature: signature.robustness,
+                        reverse=True)
+
+        # Create families based on the N most robust signatures...
+        families = list()
+        actual_num_seed_families = min(NUM_SEED_FAMILIES, len(signatures))
+        for nucleus in signatures[:actual_num_seed_families]:
+            families.append(Family(nucleus.affix_string, morphology=self,
+                            affix_side=affix_side))
+
+        # Sort families by decreasing affix length.
+        families.sort(key=lambda family:
+                      len(family.nucleus.split(AFFIX_DELIMITER)), reverse=True)
+
+        # For each remaining signature...
+        for signature in signatures[actual_num_seed_families:]:
+
+            # Break out if its robustness is below threshold.
+            if signature.robustness < min_robustness:
+                break
+
+            # Add it to the family with the largest nucleus that it contains...
+            for family in families:
+                if signature.contains(family.nucleus):
+                    family.children.add(signature.affix_string)
+                    break
+
+        # Store families in morphology...
+        if affix_side == "prefix":
+            self.prefixal_families = families
+        else:
+            self.suffixal_families = families
 
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
                             min_stem_len=MIN_STEM_LEN,
-                            min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
+                            min_num_stems=MIN_NUM_STEMS, 
+                            num_seed_families=NUM_SEED_FAMILIES,
+                            min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
+                            affix_side="suffix"):
         """Learn morphology based on wordlist.
 
         Args:
@@ -706,6 +897,11 @@ class Morphology(object):
                 a stem (default is MIN_STEM_LEN).
             min_num_stems (int, optional): minimum number of stems required in
                 a signature (default is MIN_NUM_STEMS).
+            num_seed_families (int, optional): the number of seed families to
+                create (defaults to NUM_SEED_FAMILIES).
+            min_robustness (float, optional): the minimal robustness for
+                a signature to be added to a family (defaults to
+                MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION).
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
@@ -724,11 +920,17 @@ class Morphology(object):
         self.find_signatures1(word_counts, min_stem_len, min_num_stems,
                               affix_side)
 
+        # Create signature families.
+        self.create_families(num_seed_families, min_robustness, affix_side)
+
     def learn_from_string(self, input_string,
                           tokenization_regex=TOKENIZATION_REGEX,
                           lowercase_input=LOWERCASE_INPUT,
                           min_stem_len=MIN_STEM_LEN,
-                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
+                          min_num_stems=MIN_NUM_STEMS, 
+                          num_seed_families=NUM_SEED_FAMILIES,
+                          min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
+                          affix_side="suffix"):
         """Learn morphology based on a single, unsegmented string.
 
         NB: tokenization is done with a regular expression.
@@ -743,6 +945,11 @@ class Morphology(object):
                 a stem (default is MIN_STEM_LEN).
             min_num_stems (int, optional): minimum number of stems required in
                 a signature (default is MIN_NUM_STEMS).
+            num_seed_families (int, optional): the number of seed families to
+                create (defaults to NUM_SEED_FAMILIES).
+            min_robustness (float, optional): the minimal robustness for
+                a signature to be added to a family (defaults to
+                MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION).
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
@@ -754,12 +961,15 @@ class Morphology(object):
         words = re.findall(tokenization_regex, input_string)
 
         self.learn_from_wordlist(words, lowercase_input, min_stem_len,
-                                 min_num_stems, affix_side)
+                                 min_num_stems, num_seed_families,
+                                 min_robustness, affix_side)
 
     def learn_from_file(self, input_file_path, encoding=INPUT_ENCODING,
                         tokenization_regex=TOKENIZATION_REGEX,
                         lowercase_input=LOWERCASE_INPUT,
                         min_stem_len=MIN_STEM_LEN, min_num_stems=MIN_NUM_STEMS,
+                        num_seed_families=NUM_SEED_FAMILIES,
+                        min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
                         affix_side="suffix"):
         """Learn morphology based on a text file.
 
@@ -777,6 +987,11 @@ class Morphology(object):
                 a stem (default is MIN_STEM_LEN).
             min_num_stems (int, optional): minimum number of stems required in
                 a signature (default is MIN_NUM_STEMS).
+            num_seed_families (int, optional): the number of seed families to
+                create (defaults to NUM_SEED_FAMILIES).
+            min_robustness (float, optional): the minimal robustness for
+                a signature to be added to a family (defaults to
+                MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION).
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
@@ -791,37 +1006,30 @@ class Morphology(object):
             input_file.close()
             self.learn_from_string(content, tokenization_regex,
                                    lowercase_input, min_stem_len,
-                                   min_num_stems, affix_side)
+                                   min_num_stems, num_seed_families,
+                                   min_robustness, affix_side)
         except IOError:
             print("Couldn't read file ", input_file_path)
 
     def _add_test_signatures(self):
         """"Add signatures to morphology for testing purposes."""
-        self.suffixal_signatures.add(
-            Signature(
-                stems=["want", "add", "add"],
-                affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
-            )
+        self.add_signature(
+            stems=["want", "add", "add"],
+            affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
         )
-        self.suffixal_signatures.add(
-            Signature(
-                stems=["cr", "dr"],
-                affixes=["y", "ied"],
-            )
+        self.add_signature(
+            stems=["cr", "dr"],
+            affixes=["y", "ied"],
         )
-        self.prefixal_signatures.add(
-            Signature(
-                stems=["do", "wind"],
-                affixes=["un", "re"],
-                affix_side="prefix",
-            )
+        self.add_signature(
+            stems=["do", "wind"],
+            affixes=["un", "re"],
+            affix_side="prefix",
         )
-        self.prefixal_signatures.add(
-            Signature(
-                stems=["make", "create"],
-                affixes=["re", pycrab.NULL_AFFIX],
-                affix_side="prefix",
-            )
+        self.add_signature(
+            stems=["make", "create"],
+            affixes=["re", pycrab.NULL_AFFIX],
+            affix_side="prefix",
         )
 
 
@@ -875,16 +1083,14 @@ class Signature(tuple):
 
     """
 
-    def __new__(cls, stems=None, affixes=None, affix_side="suffix"):
+    def __new__(cls, stems, affixes, affix_side="suffix"):
         """__new__ method for class Signature.
 
         Args:
-            stems (mapping or iterable, optional): stems associated with this
-                signature (with counts if arg is a dict). Defaults to empty
-                dict.
-            affixes (mapping or iterable, optional): affixes associated with
-                this signature (with counts if arg is a dict). Defaults to
-                empty dict.
+            stems (mapping or iterable): stems associated with this signature
+                (with counts if arg is a dict).
+            affixes (mapping or iterable): affixes associated with this
+                signature (with counts if arg is a dict).
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
@@ -960,6 +1166,19 @@ class Signature(tuple):
         lines.append("\nNumber of stems: %i\n" % len(self.stems))
 
         return "\n".join(lines)
+
+    def contains(self, affix_string):
+        """Indicates if all the affixes of another signature are in this one.
+
+        Args:
+            signature (string): affix string of the other signature.
+
+        Returns:
+            bool.
+
+        """
+        return set(str(affix) for affix in self.affixes)    \
+               >= set(affix_string.split(AFFIX_DELIMITER))
 
     @cached_property
     def affix_string(self):
@@ -1095,3 +1314,134 @@ class Signature(tuple):
                                  "calculation")
         counts = collections.Counter(stem[-num_letters:] for stem in self.stems)
         return pycrab.utils.entropy(counts)
+
+    @cached_property
+    def casted_shadow_signatures(self):
+        """Compute the set of shadow signatures casted by this signature.
+
+        Shadow signatures are potentially spurious signatures that pycrab's
+        learning algorithm discovers as a consequence of having discovered
+        another signature which has two or more affixes starting with the same
+        letter or sequence of letters.
+
+        Args: none.
+
+        Returns:
+            set of casted shadow signatures.
+
+        """
+        return self._compute_casted_shadow_signatures()
+
+    def _compute_casted_shadow_signatures(self):
+        """Compute the set of shadow signatures casted by this signature.
+
+        Shadow signatures are potentially spurious signatures that pycrab's
+        learning algorithm discovers as a consequence of having discovered
+        another signature which has two or more affixes starting with the same
+        letter or sequence of letters.
+
+        Args: none.
+
+        Returns:
+            set of casted shadow signatures.
+
+        """
+        casted_signatures = set()
+        for pos in range(max(len(affix) for affix in self.affixes)):
+            affix_beginnings = set(affix[0:pos] for affix in self.affixes
+                                   if len(affix) > pos)
+            for affix_beginning in affix_beginnings:
+                letter_types_at_pos = set()
+                considered_affixes = [affix for affix in self.affixes
+                                     if affix.startswith(affix_beginning)
+                                     and len(affix) > pos]
+                letter_types_at_pos = set(affix[pos]
+                                          for affix in considered_affixes)
+                if affix_beginning in self.affixes:
+                    considered_affixes.append(NULL_AFFIX)
+                    letter_types_at_pos.add(str(NULL_AFFIX))
+                if len(letter_types_at_pos) == len(considered_affixes) > 1:
+                    casted_signatures.add(AFFIX_DELIMITER.join(l for l in
+                                          sorted(letter_types_at_pos)))
+        return casted_signatures
+
+
+class Family(object):
+    """A class for implementing a family of signature in pycrab.
+
+    A family is a set of signatures related to a single nucleus signature. All
+    signatures in a family contain the nucleus, i.e. they are supersets of the
+    nucleus. Affixes contained in the superset signatures but not in the
+    nucleus are called satellite affixes.
+
+    Todo:
+        Examples
+        Tests
+
+    """
+
+    def __init__(self, nucleus, morphology, children=None, 
+                 affix_side="suffix"):
+        """__init__ method for class Family.
+
+        Args:
+            nucleus (string): affix string of the family's nucleus signature.
+            morphology (Morphology): a reference to the morphology containing 
+                this family.
+            children (iterable of signatures, optional): signatures that
+                 contain the family's nucleus (defaults to empty set).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        """
+        self.nucleus = nucleus
+        self.morphology = morphology
+        self.children = set(children if children else list())
+        self.affix_side = affix_side
+
+    def __str__(self):
+        """Formats the family for display."""
+
+        lines = ["=" * 50]
+
+        # Nucleus signature.
+        lines.append("Nucleus: " + self.nucleus)
+
+        # Satellite affix counts...
+        lines.append("Satellite affixes:")
+        satellite_affix_counts = self.get_satellite_affix_counts()
+        for item in sorted(satellite_affix_counts.items(), 
+                           key=lambda item: item[1], reverse=True):
+            lines.append("\t%s\t%s" % item)
+        if not satellite_affix_counts:
+            lines.append("\tnone")
+
+        # Child signatures..
+        lines.append("Child signatures:")
+        lines.extend("\t" + child for child in self.children)
+        if not self.children:
+            lines.append("\tnone")
+
+        return "\n".join(lines) + "\n"
+
+    def get_satellite_affix_counts(self):
+        """Returns the number of stems associated with each satellite affix.
+
+        Args: none.
+
+        Returns:
+            dictionary of satellite affix counts.
+
+        Todo: test
+
+        """
+
+        nuclei_affixes = self.nucleus.split(AFFIX_DELIMITER)
+        affix_counts = collections.Counter()
+        for affix_string in self.children:
+            signature = self.morphology.get_signature(affix_string, 
+                                                      self.affix_side)
+            for affix in affix_string.split(AFFIX_DELIMITER):
+                if affix not in nuclei_affixes:
+                    affix_counts[affix] += len(signature.stems)
+        return affix_counts

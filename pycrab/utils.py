@@ -41,7 +41,7 @@ def entropy(counts):
         if count:
             my_sum += count
             weighted_sum_of_logs += count * math.log(count)
-    return (math.log(my_sum) - weighted_sum_of_logs / my_sum) / math.log(2)
+    return abs((math.log(my_sum) - weighted_sum_of_logs/my_sum) / math.log(2))
 
 
 class ImmutableDict(dict):

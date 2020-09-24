@@ -43,11 +43,21 @@ class TestSignature(TestCase):
         self.assertEqual(self.signature.get_edge_entropy(), 1.0)
 
     def test_get_edge_entropy_several_letters(self):
-        signature = morphology.Signature(stems=["prey", "pray"])
+        signature = morphology.Signature(stems=["prey", "pray"], 
+                                         affixes=[morphology.NULL_AFFIX])
         self.assertEqual(signature.get_edge_entropy(num_letters=3), 1.0)
 
     def test_get_edge_entropy_raises_value_error(self):
         self.assertRaises(ValueError, self.signature.get_edge_entropy, 5)
+
+    def test_casted_shadow_signatures(self):
+        signature = morphology.Signature(stems=["stem"], 
+                                         affixes=["ab", "ac", "bcd", "bce",
+                                                  "cd", "c", "def"])
+        expected_affix_strings = {s.replace("=", morphology.AFFIX_DELIMITER)
+                                  for s in ["b=c", "d=e", "NULL=d"]}
+        self.assertEqual(signature.casted_shadow_signatures,
+                         expected_affix_strings)
 
     def test_init_stems_with_lists(self):
         self.assertEqual(self.signature.stems, {"want": 1, "add": 2})
@@ -69,6 +79,14 @@ class TestSignature(TestCase):
             affixes=[morphology.NULL_AFFIX, "ed", "ing"],
         )
         self.assertTrue(self.signature != other_signature)
+
+    def test_signature_contains(self):
+        affix_string = "NULL=ed".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(self.signature.contains(affix_string))
+
+    def test_signature_contains_not(self):
+        affix_string = "NULL=es".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(not self.signature.contains(affix_string))
 
     def test_suffixal_parses(self):
         expected_parses = {

@@ -34,83 +34,165 @@ class TestMorphology(TestCase):
 
     def setUp(self):
         self.morphology = morphology.Morphology(
-            suffixal_signatures={
-                morphology.Signature(
-                    stems=["want", "add", "add"],
-                    affixes=[morphology.NULL_AFFIX, "ed", "ing"],
-                ),
-                morphology.Signature(
-                    stems=["cr", "dr"],
-                    affixes=["y", "ied"],
-                ),
-            },
-            prefixal_signatures={
-                morphology.Signature(
-                    stems=["do", "wind"],
-                    affixes=["un", "re"],
-                    affix_side="prefix",
-                ),
-                morphology.Signature(
-                    stems=["make", "create"],
-                    affixes=["re", morphology.NULL_AFFIX],
-                    affix_side="prefix",
-                ),
-            },
+            morphology.Signature(
+                stems=["want", "add", "add"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            ),
+            morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
         )
 
     def test_morphology_equality(self):
         other_morphology = morphology.Morphology(
-            suffixal_signatures={
-                morphology.Signature(   # NB: equality doesn't depend on order.
-                    stems=["cr", "dr"],
-                    affixes=["y", "ied"],
-                ),
-                morphology.Signature(
-                    stems=["add", "add", "want"],
-                    affixes=[morphology.NULL_AFFIX, "ed", "ing"],
-                ),
-            },
-            prefixal_signatures={
-                morphology.Signature(
-                    stems=["do", "wind"],
-                    affixes=["un", "re"],
-                    affix_side="prefix",
-                ),
-                morphology.Signature(
-                    stems=["make", "create"],
-                    affixes=["re", morphology.NULL_AFFIX],
-                    affix_side="prefix",
-                ),
-            },
+            morphology.Signature(   # NB: equality doesn't depend on order.
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            ),
+            morphology.Signature(
+                stems=["add", "add", "want"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
         )
         self.assertTrue(self.morphology == other_morphology)
 
     def test_morphology_inequality(self):
         other_morphology = morphology.Morphology(
-            suffixal_signatures={
-                morphology.Signature(
-                    stems=["want", "add"],  # One less "add".
-                    affixes=[morphology.NULL_AFFIX, "ed", "ing"],
-                ),
-                morphology.Signature(
-                    stems=["cr", "dr"],
-                    affixes=["y", "ied"],
-                ),
-            },
-            prefixal_signatures={
-                morphology.Signature(
-                    stems=["do", "wind"],
-                    affixes=["un", "re"],
-                    affix_side="prefix",
-                ),
-                morphology.Signature(
-                    stems=["make", "create"],
-                    affixes=["re", morphology.NULL_AFFIX],
-                    affix_side="prefix",
-                ),
-            },
+            morphology.Signature(
+                stems=["want", "add"],  # One less "add".
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            ),
+            morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
         )
         self.assertTrue(self.morphology != other_morphology)
+        
+    def test_add_prefixal_signature(self):
+        signature = morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+        )
+        other_morphology = morphology.Morphology()
+        other_morphology.add_signature(signature.stems, signature.affixes, 
+                                       affix_side="prefix")
+        self.assertTrue(other_morphology.get_signature(signature.affix_string,
+                        affix_side="prefix") == signature)
+        
+    def test_add_suffixal_signature(self):
+        signature = morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+        )
+        other_morphology = morphology.Morphology()
+        other_morphology.add_signature(signature.stems, signature.affixes)
+        self.assertTrue(other_morphology.get_signature(signature.affix_string) 
+                        == signature)
+
+        
+    def test_get_prefixal_signature(self):
+        signature = morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+        )
+        other_morphology = morphology.Morphology(signature)
+        affix_string = "ied=y".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(other_morphology.get_signature(affix_string) 
+                        == signature)
+
+    def test_get_suffixal_signature(self):
+        signature = morphology.Signature(
+            stems=["do", "wind"],
+            affixes=["un", "re"],
+            affix_side="prefix",
+        )
+        other_morphology = morphology.Morphology(signature)
+        affix_string = "re=un".replace("=", morphology.AFFIX_DELIMITER)
+        self.assertTrue(other_morphology.get_signature(affix_string, 
+                        affix_side="prefix") == signature)
+
+    def test_get_signature_raises_value_error(self):
+        self.assertRaises(ValueError, self.morphology.get_signature, "dummy")
+
+    def test_get_suffixal_signatures(self):
+        expected_signatures = [
+            morphology.Signature(
+                stems=["want", "add", "add"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            ),
+        ]
+        self.assertTrue(self.morphology.get_signatures() 
+                        == expected_signatures)
+
+    def test_get_prefixal_signatures(self):
+        expected_signatures = [
+            morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
+        ]
+        self.assertTrue(self.morphology.get_signatures(affix_side="prefix") 
+                        == expected_signatures)
+
+    def test_get_shadow_signatures(self):
+        my_morphology = morphology.Morphology(
+            morphology.Signature(
+                stems=["chang"],
+                affixes=["e", "ed", "es", "ing"],
+            ),
+            morphology.Signature(
+                stems=["structural"],
+                affixes=["ism", "ist"],
+            ),
+        )
+        expected_affix_strings = {s.replace("=", morphology.AFFIX_DELIMITER)
+                                  for s in ["NULL=d=s", "m=t"]}
+        print(my_morphology.get_shadow_signatures(), expected_affix_strings)
+        self.assertTrue(my_morphology.get_shadow_signatures() 
+                        == expected_affix_strings)
 
     def test_suffixal_stems(self):
         expected_stems = {"want", "add", "dr", "cr"}
@@ -211,16 +293,14 @@ class TestMorphology(TestCase):
             ("boot", "s")                       # because min_num_stems=2
         }
         expected_morphology = morphology.Morphology(
-            suffixal_signatures={
-                morphology.Signature(
-                    stems=["want", "add"],
-                    affixes=[morphology.NULL_AFFIX, "ed", "ing"],
-                ),
-                morphology.Signature(
-                    stems=["cr", "dr"],
-                    affixes=["y", "ied"],
-                ),
-            },
+            morphology.Signature(
+                stems=["want", "add"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            ),
         )
         existing_morphology.build_signatures(parses, min_num_stems=2)
         self.assertTrue(existing_morphology == expected_morphology)
@@ -239,23 +319,21 @@ class TestMorphology(TestCase):
             ("dis", "able"),    # 'able' should be retained (min_num_stems=1)
         }
         expected_morphology = morphology.Morphology(
-            prefixal_signatures={
-                morphology.Signature(
-                    stems=["do", "wind"],
-                    affixes=["un", "re"],
-                    affix_side="prefix",
-                ),
-                morphology.Signature(
-                    stems=["make", "create"],
-                    affixes=["re", morphology.NULL_AFFIX],
-                    affix_side="prefix",
-                ),
-                morphology.Signature(
-                    stems=["able"],
-                    affixes=["dis"],
-                    affix_side="prefix",
-                ),
-            },
+            morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["able"],
+                affixes=["dis"],
+                affix_side="prefix",
+            ),
         )
         existing_morphology.build_signatures(parses, affix_side="prefix",
                                              min_num_stems=1)
