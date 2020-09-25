@@ -215,25 +215,30 @@ class TestMorphology(TestCase):
         my_morphology = morphology.Morphology()
         wordlist = ["Test", "data", "test"]
         wordlist_lower = [word.lower() for word in wordlist]
-        my_morphology.learn_from_wordlist(wordlist, True, 1, 1, "prefix")
+        my_morphology.learn_from_wordlist(wordlist, True, 1, 1, 
+                                          affix_side="prefix")
         mock_find_signatures1.assert_called_with(Counter(wordlist_lower), 1, 1,
-                                                 "prefix")
+                                                 affix_side="prefix")
 
     @patch('pycrab.Morphology.find_signatures1')
     def test_learn_from_wordlist_not_lower(self, mock_find_signatures1):
         my_morphology = morphology.Morphology()
         wordlist = ["Test", "data", "test"]
-        my_morphology.learn_from_wordlist(wordlist, False, 1, 1, "prefix")
+        my_morphology.learn_from_wordlist(wordlist, False, 1, 1, 
+                                          affix_side="prefix")
         mock_find_signatures1.assert_called_with(Counter(wordlist), 1, 1,
-                                                 "prefix")
+                                                 affix_side="prefix")
 
     @patch('pycrab.Morphology.learn_from_wordlist')
     def test_learn_from_string(self, mock_learn_from_wordlist):
         my_morphology = morphology.Morphology()
         my_morphology.learn_from_string("Test data test", r"\w+", False, 1, 1,
-                                        "prefix")
+                                        affix_side="prefix")
         mock_learn_from_wordlist.assert_called_with(["Test", "data", "test"],
-                                                    False, 1, 1, "prefix")
+            False, 1, 1, 
+            morphology.NUM_SEED_FAMILIES, 
+            morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION, 
+            affix_side="prefix")
 
     @patch('pycrab.Morphology.learn_from_string')
     def test_learn_from_file(self, mock_learn_from_string):
@@ -243,9 +248,12 @@ class TestMorphology(TestCase):
         temp.close()
         my_morphology = morphology.Morphology()
         my_morphology.learn_from_file(name, "utf8", r"\w+", False, 1, 1,
-                                      "prefix")
+                                      affix_side="prefix")
         mock_learn_from_string.assert_called_with("Test data test", r"\w+",
-                                                    False, 1, 1, "prefix")
+            False, 1, 1, 
+            morphology.NUM_SEED_FAMILIES, 
+            morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION, 
+            affix_side="prefix")
         os.remove(name)
 
     def test_suffixal_parses(self):

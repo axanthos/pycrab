@@ -10,7 +10,7 @@ This module provides functionality for command-line usage of pycrab.
 import argparse
 import sys
 
-from pycrab import Morphology
+import pycrab
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -33,7 +33,8 @@ def main():
     parser.add_argument(
         "-l", "--lowercase",
         help="Lowercase input text",
-        action="store_true",
+        action="store_true" if pycrab.morphology.LOWERCASE_INPUT 
+                            else "store_false"
     )
     parser.add_argument(
         "-p", "--prefix",
@@ -47,8 +48,9 @@ def main():
     )
     parser.add_argument(
         "-e", "--encoding",
-        help="Input file encoding (default: utf8)",
-        default="utf8",
+        help="Input file encoding (default: %s)" %
+             pycrab.morphology.INPUT_ENCODING,
+        default=pycrab.morphology.INPUT_ENCODING,
     )
     parser.add_argument(
         "-o", "--output",
@@ -56,36 +58,54 @@ def main():
              "(default: print to screen)",
     )
     parser.add_argument(
-        "-r", "--regex",
+        "-t", "--token",
         help="A regular expression to be used for tokenizing input data "
-             "(default: '\w+(?u)')",
-        default=r"\w+(?u)",
+             "(default: '%s')" % pycrab.morphology.TOKENIZATION_REGEX,
+        default=pycrab.morphology.TOKENIZATION_REGEX,
     )
     parser.add_argument(
         "-s", "--min_stem_length",
-        help="The minimum number of characters in a stem (default: 4)",
-        default=4,
+        help="The minimum number of characters in a stem (default: %i)" %
+             pycrab.morphology.MIN_STEM_LEN,
+        default=pycrab.morphology.MIN_STEM_LEN,
         type=int,
     )
     parser.add_argument(
         "-n", "--min_num_stems",
         help="The minimum number of stems for creating a signature "
-             "(default: 2)",
-        default=2,
+             "(default: %i)" % pycrab.morphology.MIN_NUM_STEMS,
+        default=pycrab.morphology.MIN_NUM_STEMS,
+        type=int,
+    )
+    parser.add_argument(
+        "-f", "--num_seed_families",
+        help="The number of seed families to create "
+             "(default: %i)" % pycrab.morphology.NUM_SEED_FAMILIES,
+        default=pycrab.morphology.NUM_SEED_FAMILIES,
+        type=int,
+    )
+    parser.add_argument(
+        "-r", "--min_robustness",
+        help="minimal robustness required for a signature to be considered "
+             "for inclusion in a family (default: %i)" %
+             pycrab.morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
+        default=pycrab.morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
         type=int,
     )
 
     # Parse and process args.
     args = parser.parse_args()
     affix_side = "prefix" if args.prefix else "suffix"
-    morphology = Morphology()
+    morphology = pycrab.Morphology()
     morphology.learn_from_file(
         input_file_path=args.input, 
         encoding=args.encoding,
-        tokenization_regex=args.regex,
+        tokenization_regex=args.token,
         lowercase_input=args.lowercase,
         min_stem_len=args.min_stem_length, 
         min_num_stems=args.min_num_stems,
+        num_seed_families=args.num_seed_families, 
+        min_robustness=args.min_robustness,
         affix_side=affix_side,
     )
 
@@ -97,6 +117,7 @@ def main():
                   args.output)
 
     print(morphology.serialize(affix_side), "\n")
+    print(morphology.serialize_families(affix_side))
     print(morphology.serialize_signatures(affix_side))
     sys.stdout = sys.__stdout__
     
