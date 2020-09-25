@@ -199,7 +199,6 @@ class Morphology(object):
         - add min_stem_length constraint in build_signatures?
         - find better names for serialization methods?
         - get_families/signatures return sets instead of lists?
-        - mirror num_seed_families and min_robustness in CLI.
 
 
     """
@@ -245,7 +244,7 @@ class Morphology(object):
 
         Returns:
             list of families.
-            
+
         Todo: test
 
         """
@@ -883,7 +882,7 @@ class Morphology(object):
 
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
                             min_stem_len=MIN_STEM_LEN,
-                            min_num_stems=MIN_NUM_STEMS, 
+                            min_num_stems=MIN_NUM_STEMS,
                             num_seed_families=NUM_SEED_FAMILIES,
                             min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
                             affix_side="suffix"):
@@ -927,7 +926,7 @@ class Morphology(object):
                           tokenization_regex=TOKENIZATION_REGEX,
                           lowercase_input=LOWERCASE_INPUT,
                           min_stem_len=MIN_STEM_LEN,
-                          min_num_stems=MIN_NUM_STEMS, 
+                          min_num_stems=MIN_NUM_STEMS,
                           num_seed_families=NUM_SEED_FAMILIES,
                           min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
                           affix_side="suffix"):
@@ -1380,13 +1379,13 @@ class Family(object):
 
     """
 
-    def __init__(self, nucleus, morphology, children=None, 
+    def __init__(self, nucleus, morphology, children=None,
                  affix_side="suffix"):
         """__init__ method for class Family.
 
         Args:
             nucleus (string): affix string of the family's nucleus signature.
-            morphology (Morphology): a reference to the morphology containing 
+            morphology (Morphology): a reference to the morphology containing
                 this family.
             children (iterable of signatures, optional): signatures that
                  contain the family's nucleus (defaults to empty set).
@@ -1410,7 +1409,7 @@ class Family(object):
         # Satellite affix counts...
         lines.append("Satellite affixes:")
         satellite_affix_counts = self.get_satellite_affix_counts()
-        for item in sorted(satellite_affix_counts.items(), 
+        for item in sorted(satellite_affix_counts.items(),
                            key=lambda item: item[1], reverse=True):
             lines.append("\t%s\t%s" % item)
         if not satellite_affix_counts:
@@ -1439,7 +1438,7 @@ class Family(object):
         nuclei_affixes = self.nucleus.split(AFFIX_DELIMITER)
         affix_counts = collections.Counter()
         for affix_string in self.children:
-            signature = self.morphology.get_signature(affix_string, 
+            signature = self.morphology.get_signature(affix_string,
                                                       self.affix_side)
             for affix in affix_string.split(AFFIX_DELIMITER):
                 if affix not in nuclei_affixes:

@@ -23,7 +23,7 @@ __status__ = "development"
 
 def main():
     """Command line usage of pycrab"""
-    
+
     # Create argument parser and declare arguments...
     parser = argparse.ArgumentParser(
         prog="pycrab",
@@ -33,7 +33,7 @@ def main():
     parser.add_argument(
         "-l", "--lowercase",
         help="Lowercase input text",
-        action="store_true" if pycrab.morphology.LOWERCASE_INPUT 
+        action="store_true" if pycrab.morphology.LOWERCASE_INPUT
                             else "store_false"
     )
     parser.add_argument(
@@ -98,13 +98,13 @@ def main():
     affix_side = "prefix" if args.prefix else "suffix"
     morphology = pycrab.Morphology()
     morphology.learn_from_file(
-        input_file_path=args.input, 
+        input_file_path=args.input,
         encoding=args.encoding,
         tokenization_regex=args.token,
         lowercase_input=args.lowercase,
-        min_stem_len=args.min_stem_length, 
+        min_stem_len=args.min_stem_length,
         min_num_stems=args.min_num_stems,
-        num_seed_families=args.num_seed_families, 
+        num_seed_families=args.num_seed_families,
         min_robustness=args.min_robustness,
         affix_side=affix_side,
     )
@@ -113,14 +113,14 @@ def main():
         try:
             sys.stdout = open(args.output, 'w')
         except IOError:
-            print("Couldn't open file %s, printing results to screen." % 
+            print("Couldn't open file %s, printing results to screen." %
                   args.output)
 
     print(morphology.serialize(affix_side), "\n")
     print(morphology.serialize_families(affix_side))
     print(morphology.serialize_signatures(affix_side))
     sys.stdout = sys.__stdout__
-    
-    
+
+
 if __name__ == "__main__":
     main()

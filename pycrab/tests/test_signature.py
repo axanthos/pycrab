@@ -43,7 +43,7 @@ class TestSignature(TestCase):
         self.assertEqual(self.signature.get_edge_entropy(), 1.0)
 
     def test_get_edge_entropy_several_letters(self):
-        signature = morphology.Signature(stems=["prey", "pray"], 
+        signature = morphology.Signature(stems=["prey", "pray"],
                                          affixes=[morphology.NULL_AFFIX])
         self.assertEqual(signature.get_edge_entropy(num_letters=3), 1.0)
 
@@ -51,7 +51,7 @@ class TestSignature(TestCase):
         self.assertRaises(ValueError, self.signature.get_edge_entropy, 5)
 
     def test_casted_shadow_signatures(self):
-        signature = morphology.Signature(stems=["stem"], 
+        signature = morphology.Signature(stems=["stem"],
                                          affixes=["ab", "ac", "bcd", "bce",
                                                   "cd", "c", "def"])
         expected_affix_strings = {s.replace("=", morphology.AFFIX_DELIMITER)
