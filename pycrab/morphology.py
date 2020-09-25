@@ -918,7 +918,7 @@ class Morphology(object):
 
         # Find signatures based on words (stored in word_counts).
         self.find_signatures1(word_counts, min_stem_len, min_num_stems,
-                              affix_side)
+                              affix_side=affix_side)
 
         # Create signature families.
         self.create_families(num_seed_families, min_robustness, affix_side)
@@ -962,7 +962,7 @@ class Morphology(object):
 
         self.learn_from_wordlist(words, lowercase_input, min_stem_len,
                                  min_num_stems, num_seed_families,
-                                 min_robustness, affix_side)
+                                 min_robustness, affix_side=affix_side)
 
     def learn_from_file(self, input_file_path, encoding=INPUT_ENCODING,
                         tokenization_regex=TOKENIZATION_REGEX,
@@ -1007,7 +1007,7 @@ class Morphology(object):
             self.learn_from_string(content, tokenization_regex,
                                    lowercase_input, min_stem_len,
                                    min_num_stems, num_seed_families,
-                                   min_robustness, affix_side)
+                                   min_robustness, affix_side=affix_side)
         except IOError:
             print("Couldn't read file ", input_file_path)
 
