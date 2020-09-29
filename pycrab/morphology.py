@@ -44,7 +44,7 @@ MIN_STEM_LEN = 2
 NUM_SEED_FAMILIES = 30
 """Module-level constant for the number of seed families to create."""
 
-MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION = 0     # TODO: sensible default?
+MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION = 100
 """Module-level constant for the minimal robustness required for a signature
 to be considered for inclusion in a family."""
 
@@ -474,8 +474,8 @@ class Morphology(object):
                 signature.get_edge_entropy(),
             ]
             affix_string = signature.affix_string
-            if affix_string in shadow_signatures:
-                affix_string = "[" + affix_string + "]"
+            affix_string = pycrab.utils.format_if_shadow(affix_string, 
+                                                         shadow_signatures)
             val_len_formats = [(affix_string, first_col_len, "%-{}s")]
             val_len_formats.extend((vals[idx], len(headers[idx]), formats[idx])
                                     for idx in range(len(headers)))
@@ -686,7 +686,7 @@ class Morphology(object):
         """
         shadow_signatures = set()
         for signature in self.get_signatures(affix_side):
-            shadow_signatures.update(signature.casted_shadow_signatures)
+            shadow_signatures.update(signature.cast_shadow_signatures)
         return shadow_signatures
 
     def build_signatures(self, parses, affix_side="suffix",
@@ -841,12 +841,8 @@ class Morphology(object):
 
         """
 
-        # Exclude shadow signatures...
-        shadow_signatures = self.get_shadow_signatures(affix_side)
-        signatures = [sig for sig in self.get_signatures(affix_side)
-                      if sig.affix_string not in shadow_signatures]
-
-        # Sort remaining signatures by decreasing robustness.
+        # Sort signatures by decreasing robustness.
+        signatures = self.get_signatures(affix_side)
         signatures.sort(key=lambda signature: signature.robustness,
                         reverse=True)
 
@@ -864,9 +860,9 @@ class Morphology(object):
         # For each remaining signature...
         for signature in signatures[actual_num_seed_families:]:
 
-            # Break out if its robustness is below threshold.
+            # Skip if its robustness is below threshold.
             if signature.robustness < min_robustness:
-                break
+                continue
 
             # Add it to the family with the largest nucleus that it contains...
             for family in families:
@@ -1315,8 +1311,8 @@ class Signature(tuple):
         return pycrab.utils.entropy(counts)
 
     @cached_property
-    def casted_shadow_signatures(self):
-        """Compute the set of shadow signatures casted by this signature.
+    def cast_shadow_signatures(self):
+        """Compute the set of shadow signatures cast by this signature.
 
         Shadow signatures are potentially spurious signatures that pycrab's
         learning algorithm discovers as a consequence of having discovered
@@ -1326,13 +1322,13 @@ class Signature(tuple):
         Args: none.
 
         Returns:
-            set of casted shadow signatures.
+            set of cast shadow signatures.
 
         """
-        return self._compute_casted_shadow_signatures()
+        return self._compute_cast_shadow_signatures()
 
-    def _compute_casted_shadow_signatures(self):
-        """Compute the set of shadow signatures casted by this signature.
+    def _compute_cast_shadow_signatures(self):
+        """Compute the set of shadow signatures cast by this signature.
 
         Shadow signatures are potentially spurious signatures that pycrab's
         learning algorithm discovers as a consequence of having discovered
@@ -1342,27 +1338,27 @@ class Signature(tuple):
         Args: none.
 
         Returns:
-            set of casted shadow signatures.
+            set of cast shadow signatures.
 
         """
-        casted_signatures = set()
+        cast_signatures = set()
         for pos in range(max(len(affix) for affix in self.affixes)):
             affix_beginnings = set(affix[0:pos] for affix in self.affixes
                                    if len(affix) > pos)
             for affix_beginning in affix_beginnings:
                 letter_types_at_pos = set()
                 considered_affixes = [affix for affix in self.affixes
-                                     if affix.startswith(affix_beginning)
-                                     and len(affix) > pos]
+                                      if affix.startswith(affix_beginning)
+                                      and len(affix) > pos]
                 letter_types_at_pos = set(affix[pos]
                                           for affix in considered_affixes)
                 if affix_beginning in self.affixes:
                     considered_affixes.append(NULL_AFFIX)
                     letter_types_at_pos.add(str(NULL_AFFIX))
                 if len(letter_types_at_pos) == len(considered_affixes) > 1:
-                    casted_signatures.add(AFFIX_DELIMITER.join(l for l in
-                                          sorted(letter_types_at_pos)))
-        return casted_signatures
+                    cast_signatures.add(AFFIX_DELIMITER.join(l for l in
+                                        sorted(letter_types_at_pos)))        
+        return cast_signatures
 
 
 class Family(object):
@@ -1403,8 +1399,12 @@ class Family(object):
 
         lines = ["=" * 50]
 
+        # Get shadow signatures' affix strings.
+        shadow_sigs = self.morphology.get_shadow_signatures(self.affix_side)
+
         # Nucleus signature.
-        lines.append("Nucleus: " + self.nucleus)
+        lines.append("Nucleus:" + 
+                     pycrab.utils.format_if_shadow(self.nucleus, shadow_sigs))
 
         # Satellite affix counts...
         lines.append("Satellite affixes:")
@@ -1417,7 +1417,8 @@ class Family(object):
 
         # Child signatures..
         lines.append("Child signatures:")
-        lines.extend("\t" + child for child in self.children)
+        lines.extend("\t" + pycrab.utils.format_if_shadow(child, shadow_sigs)
+                     for child in self.children)
         if not self.children:
             lines.append("\tnone")
 

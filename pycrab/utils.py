@@ -35,6 +35,7 @@ def entropy(counts):
             float.
 
     """
+    
     my_sum = 0
     weighted_sum_of_logs = 0
     for count in counts.values():
@@ -44,10 +45,31 @@ def entropy(counts):
     return abs((math.log(my_sum) - weighted_sum_of_logs/my_sum) / math.log(2))
 
 
+def format_if_shadow(affix_string, shadow_signatures):
+    """Applies standard formatting to an affix string if is in a list of shadow
+       signatures.
+
+        Args:
+            affix_string (string): the affix string of a signature.
+            shadow_signatures (set): a set of (affix strings) of shadow
+                signatures.
+
+        Returns:
+            string.
+
+    """
+    
+    if affix_string in shadow_signatures:
+        return "[%s]" % affix_string
+    else:
+        return affix_string
+
+
 class ImmutableDict(dict):
     """Immutable dict, based on https://gist.github.com/glyphobet/2687745.
     
     Todo: unit tests.
+    
     """
 
     def __init__(self, arg):

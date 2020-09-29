@@ -29,3 +29,9 @@ class TestUTils(TestCase):
 
     def test_entropy(self):
         self.assertEqual(utils.entropy({"a": 1, "b": 1, "c": 0}), 1.0)
+
+    def test_format_if_shadow(self):
+        self.assertEqual(utils.format_if_shadow("test", ["test"]), "[test]")
+
+    def test_format_if_not_shadow(self):
+        self.assertEqual(utils.format_if_shadow("test", []), "test")
