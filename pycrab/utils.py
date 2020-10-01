@@ -13,6 +13,8 @@ from __future__ import print_function
 
 import collections
 import math
+import functools
+
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -64,6 +66,32 @@ def format_if_shadow(affix_string, shadow_signatures):
     else:
         return affix_string
 
+
+def biograph(func):
+    """Decorator for updating word biographies after learning function.
+
+        Args:
+            func (function): the function to decorate
+
+        Returns:
+            decorated function.
+            
+        Todo: 
+            - can a word have several parses?
+            - test
+
+    """
+    
+    @functools.wraps(func)
+    def wrapper_biograph(self, *args, **kwargs):
+        func(self, *args, **kwargs)
+        affix_side = kwargs.get("affix_side", "suffix")
+        for parse in self._get_parses(affix_side):
+            self.word_biographies["".join(parse)].append((func.__name__, 
+                                                          *parse))
+
+    return wrapper_biograph
+    
 
 class ImmutableDict(dict):
     """Immutable dict, based on https://gist.github.com/glyphobet/2687745.

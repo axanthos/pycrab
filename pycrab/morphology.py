@@ -24,7 +24,7 @@ from cached_property import cached_property
 
 import pycrab.utils
 from pycrab.null_affix import NULLAffix
-from pycrab.utils import ImmutableDict
+from pycrab.utils import ImmutableDict, biograph
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -220,6 +220,7 @@ class Morphology(object):
                 self.suffixal_signatures[signature.affix_string] = signature
         self.prefixal_families = set()
         self.suffixal_families = set()
+        self.word_biographies = collections.defaultdict(list)
 
     def __eq__(self, other_morphology):
         """Tests for morphology equality."""
@@ -738,6 +739,7 @@ class Morphology(object):
 
         return len(signatures)
 
+    @biograph
     def find_signatures1(self, word_counts, min_stem_len=MIN_STEM_LEN,
                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Find initial signatures (using Goldsmith's Lxa-Crab algorithm).
