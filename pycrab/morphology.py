@@ -1004,6 +1004,7 @@ class Morphology(object):
         except IOError:
             print("Couldn't read file ", input_file_path)
 
+    @biograph
     def _add_test_signatures(self):
         """"Add signatures to morphology for testing purposes."""
         self.add_signature(
@@ -1337,6 +1338,9 @@ class Signature(tuple):
 
         Returns:
             set of cast shadow signatures.
+            
+        Todo:
+            find a way to predict on=ng=ngs=ive from ion=ing=ings=ive
 
         """
         cast_signatures = set()
