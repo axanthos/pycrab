@@ -11,12 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from collections import Counter
+import os
+import tempfile
 from unittest import TestCase
 from unittest.mock import patch
-
-from collections import Counter
-import tempfile
-import os
 
 from pycrab import morphology
 

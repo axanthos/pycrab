@@ -11,8 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 from unittest import TestCase
 
+from pycrab import Morphology
+from pycrab import Signature
 from pycrab import utils
 
 __author__ = "Aris Xanthos and John Goldsmith"
@@ -29,6 +32,29 @@ class TestUTils(TestCase):
 
     def test_entropy(self):
         self.assertEqual(utils.entropy({"a": 1, "b": 1, "c": 0}), 1.0)
+
+    def test_biograph_decorator(self):
+
+        class DummyClassForTestingBiographDecorator():
+            def __init__(self, parses):
+                self.word_biographies = collections.defaultdict(list)
+                self.parses = parses
+            def _get_parses(self, affix_side="suffix"):
+                return self.parses
+            @utils.biograph
+            def dummy_method(self, affix_side="suffix"):
+                pass
+
+        parses = {("want", "ed"), ("want", "ing"), ("add", "ed"),
+                  ("add", "ing")}
+        word_to_parses = collections.defaultdict(list)
+        for parse in parses:
+            word_to_parses["".join(parse)].append(("dummy_method", {parse}))
+        dummy_object = DummyClassForTestingBiographDecorator(parses)
+        dummy_object.dummy_method()
+        print(dummy_object.word_biographies)
+        print(word_to_parses)
+        self.assertEqual(dummy_object.word_biographies, word_to_parses)
 
     def test_format_if_shadow(self):
         self.assertEqual(utils.format_if_shadow("test", ["test"]), "[test]")

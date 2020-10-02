@@ -12,8 +12,8 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-import math
 import functools
+import math
 
 
 __author__ = "Aris Xanthos and John Goldsmith"
@@ -68,7 +68,7 @@ def format_if_shadow(affix_string, shadow_signatures):
 
 
 def biograph(func):
-    """Decorator for updating word biographies after learning function.
+    """Decorator for updating word biographies after learning functions.
 
         Args:
             func (function): the function to decorate
@@ -77,7 +77,6 @@ def biograph(func):
             decorated function.
             
         Todo: 
-            - can a word have several parses?
             - test
 
     """
@@ -85,11 +84,12 @@ def biograph(func):
     @functools.wraps(func)
     def wrapper_biograph(self, *args, **kwargs):
         func(self, *args, **kwargs)
+        word_to_parses = collections.defaultdict(set)
         affix_side = kwargs.get("affix_side", "suffix")
         for parse in self._get_parses(affix_side):
-            self.word_biographies["".join(parse)].append((func.__name__, 
-                                                          *parse))
-
+            word_to_parses["".join(parse)].add(parse)
+        for word, parses in word_to_parses.items():
+            self.word_biographies[word].append((func.__name__, parses))      
     return wrapper_biograph
     
 

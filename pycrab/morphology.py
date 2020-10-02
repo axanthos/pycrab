@@ -13,17 +13,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from io import open
 from builtins import range, dict
 import collections
+from io import open
+import os
 import itertools
 import re
-import os
 
 from cached_property import cached_property
-
-import pycrab.utils
 from pycrab.null_affix import NULLAffix
+import pycrab.utils
 from pycrab.utils import ImmutableDict, biograph
 
 __author__ = "Aris Xanthos and John Goldsmith"
@@ -199,6 +198,7 @@ class Morphology(object):
         - add min_stem_length constraint in build_signatures?
         - find better names for serialization methods?
         - get_families/signatures return sets instead of lists?
+        - document word biographies
 
 
     """
@@ -759,6 +759,7 @@ class Morphology(object):
 
         """
 
+        self.word_biographies = collections.defaultdict(list)
         protostems = set()
 
         # Store word counts as attribute.
