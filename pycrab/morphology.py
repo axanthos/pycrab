@@ -707,6 +707,11 @@ class Morphology(object):
 
         """
 
+        if affix_side == "prefix":
+            self.prefixal_signatures = dict()
+        else:
+            self.suffixal_signatures = dict()
+
         # List all possible affixes of each stem...
         affixes = collections.defaultdict(list) # TODO: set instead of list?
         if affix_side == "suffix":
@@ -725,17 +730,7 @@ class Morphology(object):
         signatures = set()
         for affixes, stems in stem_sets.items():
             if len(stems) >= min_num_stems:     # Require min number of stems.
-                signatures.add(Signature(stems, affixes, affix_side))
-
-        # Update dict of signatures in morphology...
-        if affix_side == "prefix":
-            self.prefixal_signatures = dict()
-            for signature in signatures:
-                self.prefixal_signatures[signature.affix_string] = signature
-        else:
-            self.suffixal_signatures = dict()
-            for signature in signatures:
-                self.suffixal_signatures[signature.affix_string] = signature
+                self.add_signature(stems, affixes, affix_side)
 
         return len(signatures)
 
