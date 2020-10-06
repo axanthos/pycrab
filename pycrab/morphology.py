@@ -938,7 +938,6 @@ class Morphology(object):
         signatures = self.get_signatures(affix_side)
         signatures.sort(key=lambda s: len(s.affixes), reverse=True)
         for signature in signatures:
-        
             affixes = set(signature.affixes)
             additional_stems = set()
 

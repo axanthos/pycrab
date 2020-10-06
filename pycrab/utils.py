@@ -76,16 +76,21 @@ def biograph(func):
         Returns:
             decorated function.
             
-        Todo: 
-            - test
-
+        Todo:
+            - test prefix
+            
     """
     
     @functools.wraps(func)
     def wrapper_biograph(self, *args, **kwargs):
         func(self, *args, **kwargs)
         word_to_parses = collections.defaultdict(set)
-        affix_side = kwargs.get("affix_side", "suffix")
+        if "affix_side" in kwargs:
+            affix_side = kwargs["affix_side"]
+        elif "prefix" in args:
+            affix_side = "prefix"
+        else:
+            affix_side = "suffix"
         for parse in self._get_parses(affix_side):
             word_to_parses["".join(parse)].add(parse)
         for word, parses in word_to_parses.items():
