@@ -44,16 +44,19 @@ class TestUTils(TestCase):
             @utils.biograph
             def dummy_method(self, affix_side="suffix"):
                 pass
+            @utils.biograph
+            def dummy_method2(self, affix_side="suffix"):
+                pass
 
         parses = {("want", "ed"), ("want", "ing"), ("add", "ed"),
                   ("add", "ing")}
         word_to_parses = collections.defaultdict(list)
         for parse in parses:
             word_to_parses["".join(parse)].append(("dummy_method", {parse}))
+            word_to_parses["".join(parse)].append(("dummy_method2", {parse}))
         dummy_object = DummyClassForTestingBiographDecorator(parses)
         dummy_object.dummy_method()
-        print(dummy_object.word_biographies)
-        print(word_to_parses)
+        dummy_object.dummy_method2()
         self.assertEqual(dummy_object.word_biographies, word_to_parses)
 
     def test_format_if_shadow(self):

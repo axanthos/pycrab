@@ -121,6 +121,54 @@ class TestMorphology(TestCase):
         self.assertTrue(other_morphology.get_signature(signature.affix_string)
                         == signature)
 
+    def test_remove_prefixal_signature(self):
+        signature_to_remove = morphology.Signature(
+            stems=["do", "wind"],
+            affixes=["un", "re"],
+            affix_side="prefix",
+        )
+        expected_morphology = morphology.Morphology(
+            morphology.Signature(
+                stems=["want", "add", "add"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["cr", "dr"],
+                affixes=["y", "ied"],
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
+        )
+        self.morphology.remove_signature(signature_to_remove.affix_string, 
+                                         affix_side="prefix")
+        self.assertTrue(self.morphology == expected_morphology)
+
+    def test_remove_suffixal_signature(self):
+        signature_to_remove = morphology.Signature(
+            stems=["cr", "dr"],
+            affixes=["y", "ied"],
+        )
+        expected_morphology = morphology.Morphology(
+            morphology.Signature(
+                stems=["want", "add", "add"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
+            ),
+            morphology.Signature(
+                stems=["do", "wind"],
+                affixes=["un", "re"],
+                affix_side="prefix",
+            ),
+            morphology.Signature(
+                stems=["make", "create"],
+                affixes=["re", morphology.NULL_AFFIX],
+                affix_side="prefix",
+            ),
+        )
+        self.morphology.remove_signature(signature_to_remove.affix_string)
+        self.assertTrue(self.morphology == expected_morphology)
 
     def test_get_prefixal_signature(self):
         signature = morphology.Signature(
@@ -254,6 +302,29 @@ class TestMorphology(TestCase):
             morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
             affix_side="prefix")
         os.remove(name)
+
+    def test_get_stem_and_affix_count_prefix(self):
+        my_morphology = morphology.Morphology()
+        my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
+                                     "wanting": 1, "undo": 4, "redo": 3}
+        stems = {"do"}
+        affixes = {"un", "re"}
+        expected_stem_counts = {"do": 7}
+        expected_affix_counts = {"un": 4, "re": 3}
+        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes,
+                         "prefix"), (expected_stem_counts, 
+                         expected_affix_counts))
+
+    def test_get_stem_and_affix_count_suffix(self):
+        my_morphology = morphology.Morphology()
+        my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
+                                     "wanting": 1, "undo": 4, "redo": 3}
+        stems = {"add", "want"}
+        affixes = {"ed", "ing"}
+        expected_stem_counts = {"add": 6, "want": 3}
+        expected_affix_counts = {"ed": 6, "ing": 3}
+        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes), 
+                         (expected_stem_counts, expected_affix_counts))
 
     def test_suffixal_parses(self):
         expected_parses = {

@@ -194,7 +194,6 @@ class Morphology(object):
 
     Todo:
         - check meaning of "total letter count in words" etc. in serialize()
-        - store protostems
         - add min_stem_length constraint in build_signatures?
         - find better names for serialization methods?
         - get_families/signatures return sets instead of lists?
@@ -220,6 +219,8 @@ class Morphology(object):
                 self.suffixal_signatures[signature.affix_string] = signature
         self.prefixal_families = set()
         self.suffixal_families = set()
+        self.protostems = collections.defaultdict(set)
+        self.word_counts = collections.Counter()
         self.word_biographies = collections.defaultdict(list)
 
     def __eq__(self, other_morphology):
@@ -321,6 +322,23 @@ class Morphology(object):
             self.prefixal_signatures[signature.affix_string] = signature
         else:
             self.suffixal_signatures[signature.affix_string] = signature
+
+    def remove_signature(self, affix_string, affix_side="suffix"):
+        """Removes a signature from the morphology.
+
+            affix_string (str): 
+                the affix string if the signature to remove.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+        
+        """
+
+        if affix_side == "prefix":
+            del(self.prefixal_signatures[affix_string])
+        else:
+            del(self.suffixal_signatures[affix_string])
 
     def serialize(self, affix_side="suffix"):
         """Formats the morphology for synthetic display.
@@ -690,6 +708,32 @@ class Morphology(object):
             shadow_signatures.update(signature.cast_shadow_signatures)
         return shadow_signatures
 
+    def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
+        """Return frequency counts for selected affixes and stems.
+
+        Args:
+            stems (set):
+                set of stems
+            affixes (set):
+                set of affixes
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            pair of collection.Counter object (stem and affix count).
+
+        """
+
+        stem_counts = collections.Counter()
+        affix_counts = collections.Counter()
+        for stem in stems:
+            for affix in affixes:
+                word = stem+affix if affix_side == "suffix" else affix+stem
+                word_count = self.word_counts[word]
+                stem_counts[stem] += word_count
+                affix_counts[affix] += word_count
+        return stem_counts, affix_counts
+
     def build_signatures(self, parses, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
         """Construct all signatures of a given type based on a set of parses.
@@ -780,7 +824,7 @@ class Morphology(object):
         # List all possible continuations of each protostem...
         continuations = collections.defaultdict(list)
         for word in sorted_words:
-            for prefix_len in range(MIN_STEM_LEN, len(word)+1):
+            for prefix_len in range(min_stem_len, len(word)+1):
                 prefix = word[:prefix_len]
                 if prefix in protostems:
                     continuations[prefix].append(word[prefix_len:])
@@ -789,6 +833,7 @@ class Morphology(object):
         protostem_lists = collections.defaultdict(set)
         for protostem, continuation in continuations.items():
             protostem_lists[tuple(sorted(continuation))].add(protostem)
+        self.protostems = collections.defaultdict(set)
 
         # For each continuation lists with min_num_stems stems or more...
         for continuations, protostems in protostem_lists.items():
@@ -803,19 +848,18 @@ class Morphology(object):
                 continuations = [cont if len(cont) else NULL_AFFIX
                                  for cont in continuations]
 
-                # Get stem and continuation counts...
-                protostem_counts = collections.Counter()
-                continuation_counts = collections.Counter()
-                for protostem in protostems:
-                    for continuation in continuations:
-                        word_count = word_counts[protostem + continuation]
-                        protostem_counts[protostem] += word_count
-                        continuation_counts[continuation] += word_count
+                # Get stem and affix counts...
+                stem_counts, affix_counts = self.get_stem_and_affix_count(
+                    protostems, continuations, affix_side=affix_side)
 
                 # Create and store signature.
-                self.add_signature(stems=protostem_counts,
-                                   affixes=continuation_counts,
+                self.add_signature(stems=stem_counts, affixes=affix_counts,
                                    affix_side=affix_side)
+                                   
+            # Store remaining protostems for later analysis...
+            else:
+                self.protostems.update({p: set(continuations)
+                                        for p in protostems})
 
     def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
                         min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
@@ -874,6 +918,54 @@ class Morphology(object):
         else:
             self.suffixal_families = families
 
+    @biograph
+    def widen_signatures(self, affix_side="suffix"):
+        """Expand existing signatures with protostems that can be continued
+        by all their affixes. In case of ambiguity, protostems are added to
+        the longest possible signature.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: test.
+
+        """
+        
+        # For each signature sorted by number of affixes...
+        signatures = self.get_signatures(affix_side)
+        signatures.sort(key=lambda s: len(s.affixes), reverse=True)
+        for signature in signatures:
+        
+            affixes = set(signature.affixes)
+            additional_stems = set()
+
+            # For all unanalyzed protostems...
+            for protostem, continuations in self.protostems.items():
+
+                # Replace empty affix with NULL_AFFIX.
+                continuations = set(cont if len(cont) else NULL_AFFIX
+                                    for cont in continuations)
+
+                # Add protostem if it can have all affixes in this signature...
+                if affixes.issubset(continuations):
+                    additional_stems.add(protostem)
+                    
+                    # Remove signature's affixes from protostem continuations.
+                    for affix in affixes:
+                        self.protostems[protostem].remove(affix)
+                    
+            # If new stems were found, add them to signature...
+            if additional_stems:
+                self.remove_signature(signature.affix_string, affix_side)
+                stem_counts, affix_counts = self.get_stem_and_affix_count(
+                    additional_stems.union(signature.stems), signature.affixes, 
+                    affix_side)
+                self.add_signature(stems=stem_counts, affixes=affix_counts,
+                                   affix_side=affix_side)
+
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
                             min_stem_len=MIN_STEM_LEN,
                             min_num_stems=MIN_NUM_STEMS,
@@ -915,6 +1007,9 @@ class Morphology(object):
 
         # Create signature families.
         self.create_families(num_seed_families, min_robustness, affix_side)
+
+        # Widen signatures.
+        self.widen_signatures(affix_side)
 
     def learn_from_string(self, input_string,
                           tokenization_regex=TOKENIZATION_REGEX,
