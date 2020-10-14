@@ -120,6 +120,7 @@ def main():
         print(morphology.serialize(affix_side), "\n")
         print(morphology.serialize_families(affix_side))
         print(morphology.serialize_signatures(affix_side))
+        print(morphology.serialize_stems_and_words(affix_side))
         sys.stdout = sys.__stdout__
 
     except IOError:
