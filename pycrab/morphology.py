@@ -826,7 +826,12 @@ class Morphology(object):
         signatures = set()
         for affixes, stems in stem_sets.items():
             if len(stems) >= min_num_stems:     # Require min number of stems.
-                self.add_signature(stems, affixes, affix_side)
+                if self.word_counts:
+                    stem_counts, affix_counts = self.get_stem_and_affix_count(
+                        stems, affixes, affix_side=affix_side)
+                    self.add_signature(stem_counts, affix_counts, affix_side)
+                else:   # If no word counts are available yet...
+                    self.add_signature(stems, affixes, affix_side)
 
         return len(signatures)
 
