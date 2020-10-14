@@ -326,13 +326,13 @@ class Morphology(object):
     def remove_signature(self, affix_string, affix_side="suffix"):
         """Removes a signature from the morphology.
 
-            affix_string (str): 
+            affix_string (str):
                 the affix string if the signature to remove.
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
         Returns: nothing.
-        
+
         """
 
         if affix_side == "prefix":
@@ -495,7 +495,7 @@ class Morphology(object):
                 signature.get_edge_entropy(),
             ]
             affix_string = signature.affix_string
-            affix_string = pycrab.utils.format_if_shadow(affix_string, 
+            affix_string = pycrab.utils.format_if_shadow(affix_string,
                                                          shadow_signatures)
             val_len_formats = [(affix_string, first_col_len, "%-{}s")]
             val_len_formats.extend((vals[idx], len(headers[idx]), formats[idx])
@@ -541,7 +541,7 @@ class Morphology(object):
 
         Returns:
             String.
-            
+
         Todo: test
 
         """
@@ -562,7 +562,7 @@ class Morphology(object):
             String.
 
         Todo: test
- 
+
         """
 
         lines = list()
@@ -581,20 +581,20 @@ class Morphology(object):
             for parse in parses:
                 continuations[parse[1]].add(parse[0])
                 analyzed_words.add(parse[1] + parse[0])
-        else: 
+        else:
             for parse in parses:
-                continuations[parse[0]].add(parse[1])            
+                continuations[parse[0]].add(parse[1])
                 analyzed_words.add(parse[0] + parse[1])
-        
+
         # Format each stem or word...
         for entry in sorted(entries):
             if entry in stems:
                 lines.append(entry + "\t" + "\t".join(
                              entry + c for c in sorted(continuations[entry])
                              ))
-            elif entry not in analyzed_words:            
+            elif entry not in analyzed_words:
                 lines.append(entry + "*")
-            
+
         return "\n".join(lines)
 
     @property
@@ -912,7 +912,7 @@ class Morphology(object):
                 # Create and store signature.
                 self.add_signature(stems=stem_counts, affixes=affix_counts,
                                    affix_side=affix_side)
-                                   
+
             # Store remaining protostems for later analysis...
             else:
                 self.protostems.update({p: set(continuations)
@@ -990,13 +990,15 @@ class Morphology(object):
         Todo: test.
 
         """
-        
+
+        # Get current parses.
+        parses = self._get_parses(affix_side)
+
         # For each signature sorted by number of affixes...
         signatures = self.get_signatures(affix_side)
         signatures.sort(key=lambda s: len(s.affixes), reverse=True)
         for signature in signatures:
             affixes = set(signature.affixes)
-            additional_stems = set()
 
             # For all unanalyzed protostems...
             for protostem, continuations in self.protostems.items():
@@ -1005,22 +1007,17 @@ class Morphology(object):
                 continuations = set(cont if len(cont) else NULL_AFFIX
                                     for cont in continuations)
 
-                # Add protostem if it can have all affixes in this signature...
+                # If this protostem can have all affixes in this signature...
                 if affixes.issubset(continuations):
-                    additional_stems.add(protostem)
-                    
-                    # Remove signature's affixes from protostem continuations.
+
+                    # Create new parses and remove them from unanalyzed stuff...
                     for affix in affixes:
+                        parses.add((affix, protostem) if affix_side == "prefix"
+                                   else (protostem, affix))
                         self.protostems[protostem].remove(affix)
-                    
-            # If new stems were found, add them to signature...
-            if additional_stems:
-                self.remove_signature(signature.affix_string, affix_side)
-                stem_counts, affix_counts = self.get_stem_and_affix_count(
-                    additional_stems.union(signature.stems), signature.affixes, 
-                    affix_side)
-                self.add_signature(stems=stem_counts, affixes=affix_counts,
-                                   affix_side=affix_side)
+
+        # Update signatures to reflect parses.
+        self.build_signatures(parses, affix_side)
 
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
                             min_stem_len=MIN_STEM_LEN,
@@ -1066,7 +1063,7 @@ class Morphology(object):
 
         # Create signature families.
         self.create_families(num_seed_families, min_robustness, affix_side)
-        
+
 
     def learn_from_string(self, input_string,
                           tokenization_regex=TOKENIZATION_REGEX,
@@ -1487,7 +1484,7 @@ class Signature(tuple):
 
         Returns:
             set of cast shadow signatures.
-            
+
         Todo:
             find a way to predict on=ng=ngs=ive from ion=ing=ings=ive
 
@@ -1508,7 +1505,7 @@ class Signature(tuple):
                     letter_types_at_pos.add(str(NULL_AFFIX))
                 if len(letter_types_at_pos) == len(considered_affixes) > 1:
                     cast_signatures.add(AFFIX_DELIMITER.join(l for l in
-                                        sorted(letter_types_at_pos)))        
+                                        sorted(letter_types_at_pos)))
         return cast_signatures
 
 
@@ -1554,7 +1551,7 @@ class Family(object):
         shadow_sigs = self.morphology.get_shadow_signatures(self.affix_side)
 
         # Nucleus signature.
-        lines.append("Nucleus:" + 
+        lines.append("Nucleus:" +
                      pycrab.utils.format_if_shadow(self.nucleus, shadow_sigs))
 
         # Satellite affix counts...
