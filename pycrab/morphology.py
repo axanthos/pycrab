@@ -350,6 +350,8 @@ class Morphology(object):
         Returns:
             String.
 
+        Todo: test
+
         """
 
         lines = list()
@@ -516,6 +518,8 @@ class Morphology(object):
         Returns:
             String.
 
+        Todo: test
+
         """
 
         signatures = self.get_signatures(affix_side)
@@ -537,6 +541,8 @@ class Morphology(object):
 
         Returns:
             String.
+            
+        Todo: test
 
         """
 
@@ -544,6 +550,52 @@ class Morphology(object):
         if not families:
             return("Morphology contains no %sal families." % affix_side)
         return "\n".join(str(family) for family in families)
+
+    def serialize_stems_and_words(self, affix_side="suffix"):
+        """Formats a list of stems and related words for display.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            String.
+
+        Todo: test
+ 
+        """
+
+        lines = list()
+
+        # Get union of stems and words...
+        stems = self._get_stems(affix_side)
+        entries = stems.union(self.word_counts.keys())
+        if not entries:
+            return("Morphology contains no words.")
+
+        # Get continuations of stems...
+        parses = self._get_parses(affix_side)
+        continuations = collections.defaultdict(set)
+        analyzed_words = set()
+        if affix_side == "prefix":
+            for parse in parses:
+                continuations[parse[1]].add(parse[0])
+                analyzed_words.add(parse[1] + parse[0])
+        else: 
+            for parse in parses:
+                continuations[parse[0]].add(parse[1])            
+                analyzed_words.add(parse[0] + parse[1])
+        
+        # Format each stem or word...
+        for entry in sorted(entries):
+            if entry in stems:
+                lines.append(entry + "\t" + "\t".join(
+                             entry + c for c in sorted(continuations[entry])
+                             ))
+            elif entry not in analyzed_words:            
+                lines.append(entry + "*")
+            
+        return "\n".join(lines)
 
     @property
     def suffixal_stems(self):
