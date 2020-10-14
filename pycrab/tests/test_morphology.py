@@ -142,7 +142,7 @@ class TestMorphology(TestCase):
                 affix_side="prefix",
             ),
         )
-        self.morphology.remove_signature(signature_to_remove.affix_string, 
+        self.morphology.remove_signature(signature_to_remove.affix_string,
                                          affix_side="prefix")
         self.assertTrue(self.morphology == expected_morphology)
 
@@ -312,7 +312,7 @@ class TestMorphology(TestCase):
         expected_stem_counts = {"do": 7}
         expected_affix_counts = {"un": 4, "re": 3}
         self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes,
-                         "prefix"), (expected_stem_counts, 
+                         "prefix"), (expected_stem_counts,
                          expected_affix_counts))
 
     def test_get_stem_and_affix_count_suffix(self):
@@ -323,7 +323,7 @@ class TestMorphology(TestCase):
         affixes = {"ed", "ing"}
         expected_stem_counts = {"add": 6, "want": 3}
         expected_affix_counts = {"ed": 6, "ing": 3}
-        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes), 
+        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
                          (expected_stem_counts, expected_affix_counts))
 
     def test_suffixal_parses(self):
@@ -415,4 +415,23 @@ class TestMorphology(TestCase):
         )
         existing_morphology.build_signatures(parses, affix_side="prefix",
                                              min_num_stems=1)
+        self.assertTrue(existing_morphology == expected_morphology)
+
+    def test_build_signatures_word_counts(self):
+        existing_morphology = morphology.Morphology()
+        parses = {
+            ("dr", "y"),
+            ("dr", "ied"),
+            ("cr", "y"),
+            ("cr", "ied"),
+        }
+        existing_morphology.word_counts = {"dry": 2, "cry": 1,
+                                           "dried": 1, "cried": 1}
+        expected_morphology = morphology.Morphology(
+            morphology.Signature(
+                stems={"cr": 2, "dr": 3},
+                affixes={"y": 3, "ied": 2},
+            ),
+        )
+        existing_morphology.build_signatures(parses, min_num_stems=2)
         self.assertTrue(existing_morphology == expected_morphology)
