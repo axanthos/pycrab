@@ -1004,11 +1004,12 @@ class Morphology(object):
         self.find_signatures1(word_counts, min_stem_len, min_num_stems,
                               affix_side=affix_side)
 
-        # Create signature families.
-        self.create_families(num_seed_families, min_robustness, affix_side)
-
         # Widen signatures.
         self.widen_signatures(affix_side)
+
+        # Create signature families.
+        self.create_families(num_seed_families, min_robustness, affix_side)
+        
 
     def learn_from_string(self, input_string,
                           tokenization_regex=TOKENIZATION_REGEX,
