@@ -97,29 +97,33 @@ def main():
     args = parser.parse_args()
     affix_side = "prefix" if args.prefix else "suffix"
     morphology = pycrab.Morphology()
-    morphology.learn_from_file(
-        input_file_path=args.input,
-        encoding=args.encoding,
-        tokenization_regex=args.token,
-        lowercase_input=args.lowercase,
-        min_stem_len=args.min_stem_length,
-        min_num_stems=args.min_num_stems,
-        num_seed_families=args.num_seed_families,
-        min_robustness=args.min_robustness,
-        affix_side=affix_side,
-    )
+    try:
+        morphology.learn_from_file(
+            input_file_path=args.input,
+            encoding=args.encoding,
+            tokenization_regex=args.token,
+            lowercase_input=args.lowercase,
+            min_stem_len=args.min_stem_length,
+            min_num_stems=args.min_num_stems,
+            num_seed_families=args.num_seed_families,
+            min_robustness=args.min_robustness,
+            affix_side=affix_side,
+        )
 
-    if args.output:
-        try:
-            sys.stdout = open(args.output, 'w')
-        except IOError:
-            print("Couldn't open file %s, printing results to screen." %
-                  args.output)
+        if args.output:
+            try:
+                sys.stdout = open(args.output, 'w')
+            except IOError:
+                print("Couldn't open file %s, printing results to screen." %
+                      args.output)
 
-    print(morphology.serialize(affix_side), "\n")
-    print(morphology.serialize_families(affix_side))
-    print(morphology.serialize_signatures(affix_side))
-    sys.stdout = sys.__stdout__
+        print(morphology.serialize(affix_side), "\n")
+        print(morphology.serialize_families(affix_side))
+        print(morphology.serialize_signatures(affix_side))
+        sys.stdout = sys.__stdout__
+
+    except IOError:
+        print("Couldn't open file", args.input)
 
 
 if __name__ == "__main__":

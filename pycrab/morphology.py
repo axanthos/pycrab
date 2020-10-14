@@ -1088,16 +1088,13 @@ class Morphology(object):
         """
 
         # Attempt to open and read file...
-        try:
-            input_file = open(input_file_path, encoding=encoding, mode="r")
-            content = input_file.read()
-            input_file.close()
-            self.learn_from_string(content, tokenization_regex,
-                                   lowercase_input, min_stem_len,
-                                   min_num_stems, num_seed_families,
-                                   min_robustness, affix_side=affix_side)
-        except IOError:
-            print("Couldn't read file ", input_file_path)
+        input_file = open(input_file_path, encoding=encoding, mode="r")
+        content = input_file.read()
+        input_file.close()
+        self.learn_from_string(content, tokenization_regex,
+                               lowercase_input, min_stem_len,
+                               min_num_stems, num_seed_families,
+                               min_robustness, affix_side=affix_side)
 
     @biograph
     def _add_test_signatures(self):
