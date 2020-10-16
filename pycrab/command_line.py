@@ -8,6 +8,7 @@ This module provides functionality for command-line usage of pycrab.
 """
 
 import argparse
+from pathlib import Path
 import sys
 
 import pycrab
@@ -54,7 +55,7 @@ def main():
     )
     parser.add_argument(
         "-o", "--output",
-        help="Path to a file where results will be saved "
+        help="Base filename (without suffix) for output files "
              "(default: print to screen)",
     )
     parser.add_argument(
@@ -110,17 +111,29 @@ def main():
             affix_side=affix_side,
         )
 
-        if args.output:
-            try:
-                sys.stdout = open(args.output, 'w')
-            except IOError:
-                print("Couldn't open file %s, printing results to screen." %
-                      args.output)
+        results = {
+            "morphology_overview": morphology.serialize(affix_side),
+            "families": morphology.serialize_families(affix_side),
+            "signatures_robustness": morphology.serialize_signatures(affix_side),
+            "signatures_ascii": morphology.serialize_signatures(affix_side,
+                                                                "ascii"),
+            "stems_and_words": morphology.serialize_stems_and_words(affix_side),
+            "word_biographies": morphology.serialize_word_biographies(),
+        }
 
-        print(morphology.serialize(affix_side), "\n")
-        print(morphology.serialize_families(affix_side))
-        print(morphology.serialize_signatures(affix_side))
-        print(morphology.serialize_stems_and_words(affix_side))
+        if args.output:
+            base_path = Path(args.input).parent / args.output
+        for filename, result in results.items():
+            if args.output:
+                try:
+                    path = "%s_%s.txt" % (base_path, filename)
+                    sys.stdout = open(path, 'w')
+                except IOError:
+                    print("Couldn't open file %s, printing results to screen." %
+                          args.output)
+            if not sys.stdout.name.endswith(".txt"):
+                print("#" * 80 + "\n")
+            print(result)
         sys.stdout = sys.__stdout__
 
     except IOError:

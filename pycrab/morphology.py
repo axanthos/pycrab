@@ -506,14 +506,16 @@ class Morphology(object):
                      for val, length, my_format in val_len_formats]
             lines.append((" " * separator_len).join(cells))
 
-        return "\n".join(lines)
+        return "\n".join(lines) + "\n"
 
-    def serialize_signatures(self, affix_side="suffix"):
+    def serialize_signatures(self, affix_side="suffix", order="robustness"):
         """Formats the signatures for detailed display.
 
         Args:
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
+            order (string, optional): either "robustness" (default, decreasing) 
+                or "ascii".
 
         Returns:
             String.
@@ -525,12 +527,12 @@ class Morphology(object):
         signatures = self.get_signatures(affix_side)
         if not signatures:
             return("Morphology contains no %sal signatures." % affix_side)
-        lines = list()
-        for signature in sorted(signatures,
-                                key=lambda signature: signature.robustness,
-                                reverse=True):
-            lines.append(str(signature))
-        return "\n".join(lines)
+        if order == "ascii":
+            signatures.sort(key=lambda signature: signature.affix_string)
+        else:
+            signatures.sort(key=lambda signature: signature.robustness, 
+                             reverse=True)
+        return "\n".join(str(signature) for signature in signatures)
 
     def serialize_families(self, affix_side="suffix"):
         """Formats the families for detailed display.
@@ -595,7 +597,7 @@ class Morphology(object):
             elif entry not in analyzed_words:
                 lines.append(entry + "*")
 
-        return "\n".join(lines)
+        return "\n".join(lines) + "\n"
 
     def serialize_word_biographies(self):
         """Formats word biographies for display.
@@ -610,7 +612,7 @@ class Morphology(object):
         """
 
         lines = list()
-        for word, biography in self.word_biographies.items():
+        for word, biography in sorted(self.word_biographies.items()):
             lines.append(word + ":")
             for func, parses in biography:
                 lines.append("\t" + func + ":")
