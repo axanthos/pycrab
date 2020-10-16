@@ -597,6 +597,27 @@ class Morphology(object):
 
         return "\n".join(lines)
 
+    def serialize_word_biographies(self):
+        """Formats word biographies for display.
+
+        Args: none.
+
+        Returns:
+            String.
+
+        Todo: test
+
+        """
+
+        lines = list()
+        for word, biography in self.word_biographies.items():
+            lines.append(word + ":")
+            for func, parses in biography:
+                lines.append("\t" + func + ":")
+                for parse in parses:
+                    lines.append("\t\t%s %s" % parse)
+        return "\n".join(lines)
+
     @property
     def suffixal_stems(self):
         """Construct a set of stems based on all suffixal signatures.
