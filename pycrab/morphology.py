@@ -1016,9 +1016,13 @@ class Morphology(object):
 
         # Get current parses.
         parses = self._get_parses(affix_side)
+        
+        # Initialize list of protostems previously added to a signature.
+        previously_added = set()
 
-        # For each signature sorted by number of affixes...
+        # For each signature sorted by number of affixes then robustness...
         signatures = self.get_signatures(affix_side)
+        signatures.sort(key=lambda s: s.robustness, reverse=True)
         signatures.sort(key=lambda s: len(s.affixes), reverse=True)
         for signature in signatures:
             affixes = set(signature.affixes)
@@ -1026,6 +1030,10 @@ class Morphology(object):
             # For all unanalyzed protostems...
             for protostem, continuations in self.protostems.items():
 
+                # Skip if previously added to signature...
+                if protostem in previously_added: 
+                    continue
+                    
                 # Replace empty affix with NULL_AFFIX.
                 continuations = set(cont if len(cont) else NULL_AFFIX
                                     for cont in continuations)
@@ -1038,6 +1046,9 @@ class Morphology(object):
                         parses.add((affix, protostem) if affix_side == "prefix"
                                    else (protostem, affix))
                         self.protostems[protostem].remove(affix)
+                        
+                    # Flag protostem as previously added to a signature...
+                    previously_added.add(protostem)
 
         # Update signatures to reflect parses.
         self.build_signatures(parses, affix_side)
