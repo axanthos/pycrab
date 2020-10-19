@@ -41,6 +41,8 @@ class TestUTils(TestCase):
                 self.parses = parses
             def _get_parses(self, affix_side="suffix"):
                 return self.parses
+            def get_word_biographies(self, affix_side="suffix"):
+                return self.word_biographies
             @utils.biograph
             def dummy_method(self, affix_side="suffix"):
                 pass
@@ -57,7 +59,7 @@ class TestUTils(TestCase):
         dummy_object = DummyClassForTestingBiographDecorator(parses)
         dummy_object.dummy_method()
         dummy_object.dummy_method2()
-        self.assertEqual(dummy_object.word_biographies, word_to_parses)
+        self.assertEqual(dummy_object.get_word_biographies(), word_to_parses)
 
     def test_format_if_shadow(self):
         self.assertEqual(utils.format_if_shadow("test", ["test"]), "[test]")

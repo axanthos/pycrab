@@ -221,7 +221,8 @@ class Morphology(object):
         self.suffixal_families = set()
         self.protostems = collections.defaultdict(set)
         self.word_counts = collections.Counter()
-        self.word_biographies = collections.defaultdict(list)
+        self.prefixal_word_biographies = collections.defaultdict(list)
+        self.suffixal_word_biographies = collections.defaultdict(list)
 
     def __eq__(self, other_morphology):
         """Tests for morphology equality."""
@@ -272,6 +273,23 @@ class Morphology(object):
             return list(self.prefixal_signatures.values())
         else:
             return list(self.suffixal_signatures.values())
+
+    def get_word_biographies(self, affix_side="suffix"):
+        """Returns the dict of suffixal or prefixal word biographies.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            dict of word biographies (keys are words).
+
+        """
+
+        if affix_side == "prefix":
+            return self.prefixal_word_biographies
+        else:
+            return self.suffixal_word_biographies
 
     def get_signature(self, affix_string, affix_side="suffix"):
         """Returns the Signature object corresponding to a given affix string.
@@ -599,10 +617,12 @@ class Morphology(object):
 
         return "\n".join(lines) + "\n"
 
-    def serialize_word_biographies(self):
+    def serialize_word_biographies(self, affix_side="suffix"):
         """Formats word biographies for display.
 
-        Args: none.
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
 
         Returns:
             String.
@@ -612,7 +632,8 @@ class Morphology(object):
         """
 
         lines = list()
-        for word, biography in sorted(self.word_biographies.items()):
+        for word, biography in sorted(
+                self.get_word_biographies(affix_side).items()):
             lines.append(word + ":")
             for func, parses in biography:
                 lines.append("\t" + func + ":")
@@ -878,7 +899,10 @@ class Morphology(object):
 
         """
 
-        self.word_biographies = collections.defaultdict(list)
+        if affix_side == "prefix":
+            self.prefixal_word_biographies = collections.defaultdict(list)
+        else:
+            self.suffixal_word_biographies = collections.defaultdict(list)
         protostems = set()
 
         # Store word counts as attribute.

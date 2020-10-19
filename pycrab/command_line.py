@@ -118,7 +118,7 @@ def main():
             "signatures_ascii": morphology.serialize_signatures(affix_side,
                                                                 "ascii"),
             "stems_and_words": morphology.serialize_stems_and_words(affix_side),
-            "word_biographies": morphology.serialize_word_biographies(),
+            "word_biographies": morphology.serialize_word_biographies(affix_side),
         }
 
         if args.output:

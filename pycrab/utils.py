@@ -93,8 +93,9 @@ def biograph(func):
             affix_side = "suffix"
         for parse in self._get_parses(affix_side):
             word_to_parses["".join(parse)].add(parse)
+        word_biographies = self.get_word_biographies(affix_side)
         for word, parses in word_to_parses.items():
-            self.word_biographies[word].append((func.__name__, parses))      
+            word_biographies[word].append((func.__name__, parses))      
     return wrapper_biograph
     
 
