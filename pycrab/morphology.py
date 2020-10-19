@@ -1245,9 +1245,13 @@ class Morphology(object):
 
         # Attempt to open and read file...
         input_file = open(input_file_path, encoding=encoding, mode="r")
-        content = input_file.read()
+        content_lines = input_file.readlines()
         input_file.close()
-        self.learn_from_string(content, tokenization_regex,
+        
+        # Remove lines starting with '#'
+        content_lines = [l for l in content_lines if not l.startswith("#")]
+        
+        self.learn_from_string("\n".join(content_lines), tokenization_regex,
                                lowercase_input, min_stem_len,
                                min_num_stems, num_seed_families,
                                min_robustness, affix_side=affix_side)
