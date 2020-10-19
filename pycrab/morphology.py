@@ -257,23 +257,6 @@ class Morphology(object):
         else:
             return self.suffixal_families
 
-    def get_signatures(self, affix_side="suffix"):
-        """Returns the list of suffixal or prefixal signatures.
-
-        Args:
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns:
-            list of signatures.
-
-        """
-
-        if affix_side == "prefix":
-            return list(self.prefixal_signatures.values())
-        else:
-            return list(self.suffixal_signatures.values())
-
     def get_word_biographies(self, affix_side="suffix"):
         """Returns the dict of suffixal or prefixal word biographies.
 
@@ -290,6 +273,23 @@ class Morphology(object):
             return self.prefixal_word_biographies
         else:
             return self.suffixal_word_biographies
+
+    def get_signatures(self, affix_side="suffix"):
+        """Returns the list of suffixal or prefixal signatures.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            list of signatures.
+
+        """
+
+        if affix_side == "prefix":
+            return list(self.prefixal_signatures.values())
+        else:
+            return list(self.suffixal_signatures.values())
 
     def get_signature(self, affix_string, affix_side="suffix"):
         """Returns the Signature object corresponding to a given affix string.
@@ -357,6 +357,169 @@ class Morphology(object):
             del(self.prefixal_signatures[affix_string])
         else:
             del(self.suffixal_signatures[affix_string])
+
+    @property
+    def suffixal_stems(self):
+        """Construct a set of stems based on all suffixal signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        return self._get_stems()
+
+    @property
+    def prefixal_stems(self):
+        """Construct a set of stems based on all prefixal signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        return self._get_stems(affix_side="prefix")
+
+    def _get_stems(self, affix_side="suffix"):
+        """Construct a set of stems based on all signatures of a given type.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of strings.
+
+        """
+
+        stems = set()
+        for signature in self.get_signatures(affix_side):
+            stems.update(signature.stems)
+        return stems
+
+    @property
+    def suffixes(self):
+        """Construct a set of suffixes based on all suffixal signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        return self._get_affixes()
+
+    @property
+    def prefixes(self):
+        """Construct a set of prefixes based on all prefixal signatures.
+
+        Args:
+            none.
+
+        Returns:
+            set of strings.
+
+        """
+
+        return self._get_affixes(affix_side="prefix")
+
+    def _get_affixes(self, affix_side="suffix"):
+        """Construct a set of affixes based on all signatures of a given type.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of strings.
+
+        """
+
+        affixes = set()
+        for signature in self.get_signatures(affix_side):
+            affixes.update(signature.affixes)
+        return affixes
+
+    @property
+    def suffixal_parses(self):
+        """Construct a set of parses based on all suffixal signatures.
+
+        Parses are pairs (stem, suffix).
+
+        Args:
+            none.
+
+        Returns:
+            set of tuples.
+
+        """
+
+        return self._get_parses()
+
+    @property
+    def prefixal_parses(self):
+        """Construct a set of parses based on all prefixal signatures.
+
+        Parses are pairs (prefix, stem).
+
+        Args:
+            none.
+
+        Returns:
+            set of tuples.
+
+        """
+
+        return self._get_parses(affix_side="prefix")
+
+    def _get_parses(self, affix_side="suffix"):
+        """Construct a set of parses based on all signatures of a given type.
+
+        Parses are pairs (prefix, stem) or (stem, suffix), depending on
+        affix_side arg.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of tuples.
+
+        """
+
+        parses = set()
+        for signature in self.get_signatures(affix_side):
+            parses.update(signature.parses)
+        return parses
+
+    def get_shadow_signatures(self, affix_side="suffix"):
+        """Compute the set of shadow signatures of a given type.
+
+        Shadow signatures are potentially spurious signatures that pycrab's
+        learning algorithm discovers as a consequence of having discovered
+        another signature which has two or more affixes starting with the same
+        letter or sequence of letters.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of shadow signatures.
+
+        """
+        shadow_signatures = set()
+        for signature in self.get_signatures(affix_side):
+            shadow_signatures.update(signature.cast_shadow_signatures)
+        return shadow_signatures
 
     def serialize(self, affix_side="suffix"):
         """Formats the morphology for synthetic display.
@@ -640,169 +803,6 @@ class Morphology(object):
                 for parse in parses:
                     lines.append("\t\t%s %s" % parse)
         return "\n".join(lines)
-
-    @property
-    def suffixal_stems(self):
-        """Construct a set of stems based on all suffixal signatures.
-
-        Args:
-            none.
-
-        Returns:
-            set of strings.
-
-        """
-
-        return self._get_stems()
-
-    @property
-    def prefixal_stems(self):
-        """Construct a set of stems based on all prefixal signatures.
-
-        Args:
-            none.
-
-        Returns:
-            set of strings.
-
-        """
-
-        return self._get_stems(affix_side="prefix")
-
-    def _get_stems(self, affix_side="suffix"):
-        """Construct a set of stems based on all signatures of a given type.
-
-        Args:
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns:
-            set of strings.
-
-        """
-
-        stems = set()
-        for signature in self.get_signatures(affix_side):
-            stems.update(signature.stems)
-        return stems
-
-    @property
-    def suffixes(self):
-        """Construct a set of suffixes based on all suffixal signatures.
-
-        Args:
-            none.
-
-        Returns:
-            set of strings.
-
-        """
-
-        return self._get_affixes()
-
-    @property
-    def prefixes(self):
-        """Construct a set of prefixes based on all prefixal signatures.
-
-        Args:
-            none.
-
-        Returns:
-            set of strings.
-
-        """
-
-        return self._get_affixes(affix_side="prefix")
-
-    def _get_affixes(self, affix_side="suffix"):
-        """Construct a set of affixes based on all signatures of a given type.
-
-        Args:
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns:
-            set of strings.
-
-        """
-
-        affixes = set()
-        for signature in self.get_signatures(affix_side):
-            affixes.update(signature.affixes)
-        return affixes
-
-    @property
-    def suffixal_parses(self):
-        """Construct a set of parses based on all suffixal signatures.
-
-        Parses are pairs (stem, suffix).
-
-        Args:
-            none.
-
-        Returns:
-            set of tuples.
-
-        """
-
-        return self._get_parses()
-
-    @property
-    def prefixal_parses(self):
-        """Construct a set of parses based on all prefixal signatures.
-
-        Parses are pairs (prefix, stem).
-
-        Args:
-            none.
-
-        Returns:
-            set of tuples.
-
-        """
-
-        return self._get_parses(affix_side="prefix")
-
-    def _get_parses(self, affix_side="suffix"):
-        """Construct a set of parses based on all signatures of a given type.
-
-        Parses are pairs (prefix, stem) or (stem, suffix), depending on
-        affix_side arg.
-
-        Args:
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns:
-            set of tuples.
-
-        """
-
-        parses = set()
-        for signature in self.get_signatures(affix_side):
-            parses.update(signature.parses)
-        return parses
-
-    def get_shadow_signatures(self, affix_side="suffix"):
-        """Compute the set of shadow signatures of a given type.
-
-        Shadow signatures are potentially spurious signatures that pycrab's
-        learning algorithm discovers as a consequence of having discovered
-        another signature which has two or more affixes starting with the same
-        letter or sequence of letters.
-
-        Args:
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns:
-            set of shadow signatures.
-
-        """
-        shadow_signatures = set()
-        for signature in self.get_signatures(affix_side):
-            shadow_signatures.update(signature.cast_shadow_signatures)
-        return shadow_signatures
 
     def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
         """Return frequency counts for selected affixes and stems.
