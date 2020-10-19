@@ -791,9 +791,14 @@ class Morphology(object):
         # Format each stem or word...
         for entry in sorted(entries):
             if entry in stems:
-                lines.append(entry + "\t" + "\t".join(
-                             entry + c for c in sorted(continuations[entry])
-                             ))
+                if affix_side == "prefix":
+                    lines.append(entry + "\t" + "\t".join(
+                                 c + entry for c in sorted(continuations[entry])
+                                 ))
+                else:
+                    lines.append(entry + "\t" + "\t".join(
+                                 entry + c for c in sorted(continuations[entry])
+                                 ))
             elif entry not in analyzed_words:
                 lines.append(entry + "*")
 
@@ -821,6 +826,27 @@ class Morphology(object):
                 lines.append("\t" + func + ":")
                 for parse in parses:
                     lines.append("\t\t%s %s" % parse)
+        return "\n".join(lines)
+
+    def serialize_protostems(self, affix_side="suffix"):
+        """Formats protostems and continuations for display.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            String.
+
+        Todo: test
+
+        """
+
+        lines = list()
+        for protostem, continuations in sorted(
+                self.get_protostems(affix_side).items()):
+            lines.append(protostem + ": " + ", ".join(sorted(str(c) 
+                                                     for c in continuations)))
         return "\n".join(lines)
 
     def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
@@ -966,12 +992,12 @@ class Morphology(object):
                 protostems = [protostem[::-1] for protostem in protostems]
                 continuations = [cont[::-1] for cont in continuations]
 
+            # Replace empty affix with NULL_AFFIX.
+            continuations = [cont if len(cont) else NULL_AFFIX
+                             for cont in continuations]
+
             # If continuation list has min_num_stems stems or more...
             if len(protostems) >= min_num_stems:
-
-                # Replace empty affix with NULL_AFFIX.
-                continuations = [cont if len(cont) else NULL_AFFIX
-                                 for cont in continuations]
 
                 # Get stem and affix counts...
                 stem_counts, affix_counts = self.get_stem_and_affix_count(
@@ -1080,10 +1106,6 @@ class Morphology(object):
                 if protostem in previously_added: 
                     continue
                     
-                # Replace empty affix with NULL_AFFIX.
-                continuations = set(cont if len(cont) else NULL_AFFIX
-                                    for cont in continuations)
-
                 # If this protostem can have all affixes in this signature...
                 if affixes.issubset(continuations):
 
