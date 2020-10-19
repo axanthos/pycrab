@@ -219,10 +219,11 @@ class Morphology(object):
                 self.suffixal_signatures[signature.affix_string] = signature
         self.prefixal_families = set()
         self.suffixal_families = set()
-        self.protostems = collections.defaultdict(set)
-        self.word_counts = collections.Counter()
+        self.prefixal_protostems = collections.defaultdict(set)
+        self.suffixal_protostems = collections.defaultdict(set)
         self.prefixal_word_biographies = collections.defaultdict(list)
         self.suffixal_word_biographies = collections.defaultdict(list)
+        self.word_counts = collections.Counter()
 
     def __eq__(self, other_morphology):
         """Tests for morphology equality."""
@@ -273,6 +274,24 @@ class Morphology(object):
             return self.prefixal_word_biographies
         else:
             return self.suffixal_word_biographies
+
+    def get_protostems(self, affix_side="suffix"):
+        """Returns the dict of suffixal/prefixal protostems and continuations.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            dict of protostem continuations (keys are protostems, values are
+            sets of strings).
+
+        """
+
+        if affix_side == "prefix":
+            return self.prefixal_protostems
+        else:
+            return self.suffixal_protostems
 
     def get_signatures(self, affix_side="suffix"):
         """Returns the list of suffixal or prefixal signatures.
@@ -370,7 +389,7 @@ class Morphology(object):
 
         """
 
-        return self._get_stems()
+        return self.get_stems()
 
     @property
     def prefixal_stems(self):
@@ -384,9 +403,9 @@ class Morphology(object):
 
         """
 
-        return self._get_stems(affix_side="prefix")
+        return self.get_stems(affix_side="prefix")
 
-    def _get_stems(self, affix_side="suffix"):
+    def get_stems(self, affix_side="suffix"):
         """Construct a set of stems based on all signatures of a given type.
 
         Args:
@@ -415,7 +434,7 @@ class Morphology(object):
 
         """
 
-        return self._get_affixes()
+        return self.get_affixes()
 
     @property
     def prefixes(self):
@@ -429,9 +448,9 @@ class Morphology(object):
 
         """
 
-        return self._get_affixes(affix_side="prefix")
+        return self.get_affixes(affix_side="prefix")
 
-    def _get_affixes(self, affix_side="suffix"):
+    def get_affixes(self, affix_side="suffix"):
         """Construct a set of affixes based on all signatures of a given type.
 
         Args:
@@ -462,7 +481,7 @@ class Morphology(object):
 
         """
 
-        return self._get_parses()
+        return self.get_parses()
 
     @property
     def prefixal_parses(self):
@@ -478,9 +497,9 @@ class Morphology(object):
 
         """
 
-        return self._get_parses(affix_side="prefix")
+        return self.get_parses(affix_side="prefix")
 
-    def _get_parses(self, affix_side="suffix"):
+    def get_parses(self, affix_side="suffix"):
         """Construct a set of parses based on all signatures of a given type.
 
         Parses are pairs (prefix, stem) or (stem, suffix), depending on
@@ -609,7 +628,7 @@ class Morphology(object):
         ))
 
         # Number of analyzed words...
-        parses = self._get_parses(affix_side)
+        parses = self.get_parses(affix_side)
         lines.append("%-45s %10i" % ("Number of analyzed words:", len(parses)))
 
         # Total number of letters in analyzed words.
@@ -751,13 +770,13 @@ class Morphology(object):
         lines = list()
 
         # Get union of stems and words...
-        stems = self._get_stems(affix_side)
+        stems = self.get_stems(affix_side)
         entries = stems.union(self.word_counts.keys())
         if not entries:
             return("Morphology contains no words.")
 
         # Get continuations of stems...
-        parses = self._get_parses(affix_side)
+        parses = self.get_parses(affix_side)
         continuations = collections.defaultdict(set)
         analyzed_words = set()
         if affix_side == "prefix":
@@ -939,14 +958,16 @@ class Morphology(object):
             protostem_lists[tuple(sorted(continuation))].add(protostem)
         self.protostems = collections.defaultdict(set)
 
-        # For each continuation lists with min_num_stems stems or more...
+        # For each continuation list...
         for continuations, protostems in protostem_lists.items():
-            if len(protostems) >= min_num_stems:
 
-                # If affix side is prefix, reverse stems and continuations...
-                if affix_side == "prefix":
-                    protostems = [protostem[::-1] for protostem in protostems]
-                    continuations = [cont[::-1] for cont in continuations]
+            # If affix side is prefix, reverse stems and continuations...
+            if affix_side == "prefix":
+                protostems = [protostem[::-1] for protostem in protostems]
+                continuations = [cont[::-1] for cont in continuations]
+
+            # If continuation list has min_num_stems stems or more...
+            if len(protostems) >= min_num_stems:
 
                 # Replace empty affix with NULL_AFFIX.
                 continuations = [cont if len(cont) else NULL_AFFIX
@@ -962,8 +983,8 @@ class Morphology(object):
 
             # Store remaining protostems for later analysis...
             else:
-                self.protostems.update({p: set(continuations)
-                                        for p in protostems})
+                self.get_protostems(affix_side).update({p: set(continuations)
+                                                        for p in protostems})
 
     def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
                         min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
@@ -1038,8 +1059,9 @@ class Morphology(object):
 
         """
 
-        # Get current parses.
-        parses = self._get_parses(affix_side)
+        # Get current parses and protostems.
+        parses = self.get_parses(affix_side)
+        protostems = self.get_protostems(affix_side)
         
         # Initialize list of protostems previously added to a signature.
         previously_added = set()
@@ -1052,7 +1074,7 @@ class Morphology(object):
             affixes = set(signature.affixes)
 
             # For all unanalyzed protostems...
-            for protostem, continuations in self.protostems.items():
+            for protostem, continuations in protostems.items():
 
                 # Skip if previously added to signature...
                 if protostem in previously_added: 
@@ -1069,7 +1091,7 @@ class Morphology(object):
                     for affix in affixes:
                         parses.add((affix, protostem) if affix_side == "prefix"
                                    else (protostem, affix))
-                        self.protostems[protostem].remove(affix)
+                        protostems[protostem].remove(affix)
                         
                     # Flag protostem as previously added to a signature...
                     previously_added.add(protostem)

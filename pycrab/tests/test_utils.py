@@ -39,7 +39,7 @@ class TestUTils(TestCase):
             def __init__(self, parses):
                 self.word_biographies = collections.defaultdict(list)
                 self.parses = parses
-            def _get_parses(self, affix_side="suffix"):
+            def get_parses(self, affix_side="suffix"):
                 return self.parses
             def get_word_biographies(self, affix_side="suffix"):
                 return self.word_biographies
