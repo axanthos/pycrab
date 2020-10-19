@@ -824,7 +824,7 @@ class Morphology(object):
             lines.append(word + ":")
             for func, parses in biography:
                 lines.append("\t" + func + ":")
-                for parse in parses:
+                for parse in sorted(parses):
                     lines.append("\t\t%s %s" % parse)
         return "\n".join(lines)
 
