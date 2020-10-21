@@ -37,10 +37,14 @@ class TestUTils(TestCase):
 
         class DummyClassForTestingBiographDecorator():
             def __init__(self, parses):
-                self.word_biographies = collections.defaultdict(list)
+                self.word_biographies = collections.defaultdict(dict)
                 self.parses = parses
+                self.word_counts = {"".join(parse): 1 for parse in parses}
+                self.analyses_list = list()
             def get_parses(self, affix_side="suffix"):
                 return self.parses
+            def get_analyses_list(self, affix_side="suffix"):
+                return self.analyses_list
             def get_word_biographies(self, affix_side="suffix"):
                 return self.word_biographies
             @utils.biograph
@@ -52,10 +56,10 @@ class TestUTils(TestCase):
 
         parses = {("want", "ed"), ("want", "ing"), ("add", "ed"),
                   ("add", "ing")}
-        word_to_parses = collections.defaultdict(list)
+        word_to_parses = collections.defaultdict(dict)
         for parse in parses:
-            word_to_parses["".join(parse)].append(("dummy_method", {parse}))
-            word_to_parses["".join(parse)].append(("dummy_method2", {parse}))
+            word_to_parses["".join(parse)]["dummy_method"] = {parse}
+            word_to_parses["".join(parse)]["dummy_method2"] = {parse}
         dummy_object = DummyClassForTestingBiographDecorator(parses)
         dummy_object.dummy_method()
         dummy_object.dummy_method2()

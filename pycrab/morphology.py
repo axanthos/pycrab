@@ -47,6 +47,14 @@ MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION = 100
 """Module-level constant for the minimal robustness required for a signature
 to be considered for inclusion in a family."""
 
+MIN_ENTROPY_FOR_BIPARSE_INCLUSION = 1.5
+"""Module-level constant for the minimal edge entropy required for a signature
+to be added to a biparse."""
+
+MIN_ENTROPY_FOR_MORPHEME_SPLITTING = 1
+"""Module-level constant for the minimal edge entropy required for morphemes to
+be splitted in a signature."""
+
 AFFIX_DELIMITER = "="
 """Module-level constant for the delimiter symbol in affix strings."""
 
@@ -221,8 +229,10 @@ class Morphology(object):
         self.suffixal_families = set()
         self.prefixal_protostems = collections.defaultdict(set)
         self.suffixal_protostems = collections.defaultdict(set)
-        self.prefixal_word_biographies = collections.defaultdict(list)
-        self.suffixal_word_biographies = collections.defaultdict(list)
+        self.prefixal_word_biographies = collections.defaultdict(dict)
+        self.suffixal_word_biographies = collections.defaultdict(dict)
+        self.prefixal_analyses_run = list()
+        self.suffixal_analyses_run = list()
         self.word_counts = collections.Counter()
 
     def __eq__(self, other_morphology):
@@ -519,6 +529,25 @@ class Morphology(object):
             parses.update(signature.parses)
         return parses
 
+    def get_analyses_list(self, affix_side="suffix"):
+        """Returns the list of analyses run on suffixes or prefixes.
+
+        Analyses are names of methods in this class.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            list of strings.
+
+        """
+
+        if affix_side == "prefix":
+            return self.prefixal_analyses_run
+        else:
+            return self.suffixal_analyses_run
+
     def get_shadow_signatures(self, affix_side="suffix"):
         """Compute the set of shadow signatures of a given type.
 
@@ -714,7 +743,7 @@ class Morphology(object):
         Args:
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
-            order (string, optional): either "robustness" (default, decreasing) 
+            order (string, optional): either "robustness" (default, decreasing)
                 or "ascii".
 
         Returns:
@@ -730,7 +759,7 @@ class Morphology(object):
         if order == "ascii":
             signatures.sort(key=lambda signature: signature.affix_string)
         else:
-            signatures.sort(key=lambda signature: signature.robustness, 
+            signatures.sort(key=lambda signature: signature.robustness,
                              reverse=True)
         return "\n".join(str(signature) for signature in signatures)
 
@@ -822,10 +851,16 @@ class Morphology(object):
         for word, biography in sorted(
                 self.get_word_biographies(affix_side).items()):
             lines.append(word + ":")
-            for func, parses in biography:
+            for func in self.get_analyses_list(affix_side):
                 lines.append("\t" + func + ":")
-                for parse in sorted(parses):
-                    lines.append("\t\t%s %s" % parse)
+                try:
+                    for parse in sorted(biography[func]):
+                        if parse is None:
+                            lines.append("\t\tunanalyzed")
+                        else:
+                            lines.append("\t\t%s %s" % parse)
+                except KeyError:
+                    lines.append("\t\tunanalyzed")
         return "\n".join(lines)
 
     def serialize_protostems(self, affix_side="suffix"):
@@ -845,7 +880,7 @@ class Morphology(object):
         lines = list()
         for protostem, continuations in sorted(
                 self.get_protostems(affix_side).items()):
-            lines.append(protostem + ": " + ", ".join(sorted(str(c) 
+            lines.append(protostem + ": " + ", ".join(sorted(str(c)
                                                      for c in continuations)))
         return "\n".join(lines)
 
@@ -944,23 +979,25 @@ class Morphology(object):
 
         """
 
-        if affix_side == "prefix":
-            self.prefixal_word_biographies = collections.defaultdict(list)
-        else:
-            self.suffixal_word_biographies = collections.defaultdict(list)
         protostems = set()
+        self.name_collisions = collections.Counter()
 
         # Store word counts as attribute.
         self.word_counts = word_counts
 
         # Select affix side...
-        signatures = self.get_signatures(affix_side)
         if affix_side == "suffix":
             sorted_words = sorted(list(word_counts))
             self.suffixal_signatures = dict()
+            self.suffixal_word_biographies = collections.defaultdict(dict)
+            self.suffixal_protostems = collections.defaultdict(set)
+            self.suffixal_analyses_run = list()
         else:
             sorted_words = sorted(word[::-1] for word in word_counts)
             self.prefixal_signatures = dict()
+            self.prefixal_word_biographies = collections.defaultdict(dict)
+            self.prefixal_protostems = collections.defaultdict(set)
+            self.prefixal_analyses_run = list()
 
         # For each pair of successive words (in alphabetical order)...
         for idx in range(len(sorted_words)-1):
@@ -982,7 +1019,6 @@ class Morphology(object):
         protostem_lists = collections.defaultdict(set)
         for protostem, continuation in continuations.items():
             protostem_lists[tuple(sorted(continuation))].add(protostem)
-        self.protostems = collections.defaultdict(set)
 
         # For each continuation list...
         for continuations, protostems in protostem_lists.items():
@@ -1088,7 +1124,7 @@ class Morphology(object):
         # Get current parses and protostems.
         parses = self.get_parses(affix_side)
         protostems = self.get_protostems(affix_side)
-        
+
         # Initialize list of protostems previously added to a signature.
         previously_added = set()
 
@@ -1103,9 +1139,9 @@ class Morphology(object):
             for protostem, continuations in protostems.items():
 
                 # Skip if previously added to signature...
-                if protostem in previously_added: 
+                if protostem in previously_added:
                     continue
-                    
+
                 # If this protostem can have all affixes in this signature...
                 if affixes.issubset(continuations):
 
@@ -1114,9 +1150,80 @@ class Morphology(object):
                         parses.add((affix, protostem) if affix_side == "prefix"
                                    else (protostem, affix))
                         protostems[protostem].remove(affix)
-                        
+
                     # Flag protostem as previously added to a signature...
                     previously_added.add(protostem)
+
+        # Update signatures to reflect parses.
+        self.build_signatures(parses, affix_side)
+
+    @biograph
+    def split_morphemes(self, affix_side="suffix"):
+        """TODO
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: test.
+
+        """
+
+        # Get all analyses (stem + signature) associated with each word...
+        word_to_analyses = collections.defaultdict(set)
+        for signature in self.get_signatures(affix_side):
+            for parse in signature.parses:
+                stem = parse[1] if affix_side == "prefix" else parse[0]
+                word_to_analyses["".join(parse)].add(
+                        (stem, signature.affix_string))
+
+        # Find stems associated with same biparse (pair of sigs + diff)...
+        biparse_to_stems = collections.defaultdict(set)
+        for word, signatures in word_to_analyses.items():
+            if len(signatures) > 1:
+                pairs = itertools.combinations(sorted(signatures,
+                                               key=lambda x: len(x[0])), 2)
+                for analysis1, analysis2 in pairs:
+                    if self.get_signature(analysis2[1]).get_edge_entropy()    \
+                            >= MIN_ENTROPY_FOR_BIPARSE_INCLUSION:
+                        diff = analysis2[0][len(analysis1[0]):]
+                        key = diff, analysis1[1], analysis2[1]
+                        biparse_to_stems[key].add(analysis1[0])
+
+        # Sort biparses by number of stems then diff...
+        biparses = list(biparse_to_stems)
+        biparses.sort(key=lambda x: x[0])
+        biparses.sort(key=lambda x: len(biparse_to_stems.get(x)))
+
+        parses = self.get_parses(affix_side)
+
+        # Actual morpheme splitting (if edge entropy is sufficient)...
+        for diff, signature1, signature2 in biparses:
+            if self.get_signature(signature2).get_edge_entropy()   \
+                    >= MIN_ENTROPY_FOR_MORPHEME_SPLITTING:
+                self.name_collisions[diff] += 1
+                disamb_diff = ":%s%i" % (diff, self.name_collisions[diff]+1)
+
+                # Update parses...
+                for affix in self.get_signature(signature1).affixes:
+                    if affix == diff:
+                        parses.add((disamb_diff, NULL_AFFIX))
+                        print("added1", disamb_diff, NULL_AFFIX)
+                    elif affix.startswith(diff):
+                        parses.add((disamb_diff, affix[len(diff):]))
+                        print("added2", disamb_diff, affix[len(diff):])
+                for stem in biparse_to_stems[diff, signature1, signature2]:
+                    parses.add((stem, disamb_diff))
+                    print("added4", stem, disamb_diff)
+                    for affix in self.get_signature(signature2).affixes:
+                        parses.discard((stem+diff, affix))
+                        print("removed1", stem+diff, affix)
+                    for affix in self.get_signature(signature1).affixes:
+                        if affix.startswith(diff):
+                            parses.discard((stem, affix))
+                            print("removed2", stem, affix)
 
         # Update signatures to reflect parses.
         self.build_signatures(parses, affix_side)
@@ -1165,6 +1272,9 @@ class Morphology(object):
 
         # Create signature families.
         self.create_families(num_seed_families, min_robustness, affix_side)
+
+        # Split morphemes.
+        self.split_morphemes(affix_side)
 
 
     def learn_from_string(self, input_string,
@@ -1247,10 +1357,10 @@ class Morphology(object):
         input_file = open(input_file_path, encoding=encoding, mode="r")
         content_lines = input_file.readlines()
         input_file.close()
-        
+
         # Remove lines starting with '#'
         content_lines = [l for l in content_lines if not l.startswith("#")]
-        
+
         self.learn_from_string("\n".join(content_lines), tokenization_regex,
                                lowercase_input, min_stem_len,
                                min_num_stems, num_seed_families,

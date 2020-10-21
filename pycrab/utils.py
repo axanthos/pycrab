@@ -37,7 +37,7 @@ def entropy(counts):
             float.
 
     """
-    
+
     my_sum = 0
     weighted_sum_of_logs = 0
     for count in counts.values():
@@ -60,7 +60,7 @@ def format_if_shadow(affix_string, shadow_signatures):
             string.
 
     """
-    
+
     if affix_string in shadow_signatures:
         return "[%s]" % affix_string
     else:
@@ -75,12 +75,12 @@ def biograph(func):
 
         Returns:
             decorated function.
-            
+
         Todo:
             - test prefix
-            
+
     """
-    
+
     @functools.wraps(func)
     def wrapper_biograph(self, *args, **kwargs):
         func(self, *args, **kwargs)
@@ -95,15 +95,19 @@ def biograph(func):
             word_to_parses["".join(parse)].add(parse)
         word_biographies = self.get_word_biographies(affix_side)
         for word, parses in word_to_parses.items():
-            word_biographies[word].append((func.__name__, parses))      
+            word_biographies[word][func.__name__] = parses
+        for word in self.word_counts.keys():
+            if word not in word_biographies:
+                word_biographies[word][func.__name__] = {None}
+        self.get_analyses_list(affix_side).append(func.__name__)
     return wrapper_biograph
-    
+
 
 class ImmutableDict(dict):
     """Immutable dict, based on https://gist.github.com/glyphobet/2687745.
-    
+
     Todo: unit tests.
-    
+
     """
 
     def __init__(self, arg):
