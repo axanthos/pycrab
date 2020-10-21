@@ -1210,20 +1210,15 @@ class Morphology(object):
                 for affix in self.get_signature(signature1).affixes:
                     if affix == diff:
                         parses.add((disamb_diff, NULL_AFFIX))
-                        print("added1", disamb_diff, NULL_AFFIX)
                     elif affix.startswith(diff):
                         parses.add((disamb_diff, affix[len(diff):]))
-                        print("added2", disamb_diff, affix[len(diff):])
                 for stem in biparse_to_stems[diff, signature1, signature2]:
                     parses.add((stem, disamb_diff))
-                    print("added4", stem, disamb_diff)
                     for affix in self.get_signature(signature2).affixes:
                         parses.discard((stem+diff, affix))
-                        print("removed1", stem+diff, affix)
                     for affix in self.get_signature(signature1).affixes:
                         if affix.startswith(diff):
                             parses.discard((stem, affix))
-                            print("removed2", stem, affix)
 
         # Update signatures to reflect parses.
         self.build_signatures(parses, affix_side)
