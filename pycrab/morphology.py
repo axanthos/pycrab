@@ -1265,11 +1265,11 @@ class Morphology(object):
         # Widen signatures.
         self.widen_signatures(affix_side)
 
-        # Create signature families.
-        self.create_families(num_seed_families, min_robustness, affix_side)
-
         # Split morphemes.
         self.split_morphemes(affix_side)
+
+        # Create signature families.
+        self.create_families(num_seed_families, min_robustness, affix_side)
 
 
     def learn_from_string(self, input_string,
