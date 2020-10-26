@@ -15,6 +15,7 @@ from __future__ import print_function
 
 from builtins import range, dict
 import collections
+import inspect
 from io import open
 import os
 import itertools
@@ -57,6 +58,9 @@ be splitted in a signature."""
 
 AFFIX_DELIMITER = "="
 """Module-level constant for the delimiter symbol in affix strings."""
+
+AFFIX_MARKER = ":"
+"""Module-level constant for the symbol that marks affixes when needed."""
 
 TOKENIZATION_REGEX = r"\w+(?u)"
 """Module-level constant for the regex pattern used to tokenize text."""
@@ -855,10 +859,10 @@ class Morphology(object):
                 lines.append("\t" + func + ":")
                 try:
                     for parse in sorted(biography[func]):
-                        if parse is None:
-                            lines.append("\t\tunanalyzed")
-                        else:
-                            lines.append("\t\t%s %s" % parse)
+                        # if parse is None:
+                            # lines.append("\t\tunanalyzed")
+                        # else:
+                        lines.append("\t\t%s %s" % parse)
                 except KeyError:
                     lines.append("\t\tunanalyzed")
         return "\n".join(lines)
@@ -985,7 +989,7 @@ class Morphology(object):
         # Store word counts as attribute.
         self.word_counts = word_counts
 
-        # Select affix side...
+        # Select affix side and initialize morphology attributes...
         if affix_side == "suffix":
             sorted_words = sorted(list(word_counts))
             self.suffixal_signatures = dict()
@@ -1157,7 +1161,6 @@ class Morphology(object):
         # Update signatures to reflect parses.
         self.build_signatures(parses, affix_side)
 
-    @biograph
     def split_morphemes(self, affix_side="suffix"):
         """TODO
 
@@ -1173,55 +1176,62 @@ class Morphology(object):
 
         # Get all analyses (stem + signature) associated with each word...
         word_to_analyses = collections.defaultdict(set)
-        for signature in self.get_signatures(affix_side):
-            for parse in signature.parses:
+        for sig in self.get_signatures(affix_side):
+            for parse in sig.parses:
                 stem = parse[1] if affix_side == "prefix" else parse[0]
-                word_to_analyses["".join(parse)].add(
-                        (stem, signature.affix_string))
+                word_to_analyses["".join(parse)].add((stem, sig.affix_string))
 
-        # Find stems associated with same biparse (pair of sigs + diff)...
+        # Find biparses (pair of sigs + diff) and corresponding sets of stems...
         biparse_to_stems = collections.defaultdict(set)
-        for word, signatures in word_to_analyses.items():
-            if len(signatures) > 1:
-                pairs = itertools.combinations(sorted(signatures,
-                                               key=lambda x: len(x[0])), 2)
-                for analysis1, analysis2 in pairs:
-                    if self.get_signature(analysis2[1]).get_edge_entropy()    \
+        for analyses in word_to_analyses.values():
+            if len(analyses) > 1:
+                pairs_of_analyses = itertools.combinations(sorted(analyses,
+                        key=lambda x: len(x[0])), 2)
+                for (stem1, sig1), (stem2, sig2) in pairs_of_analyses:
+                    if self.get_signature(sig2).get_edge_entropy()    \
                             >= MIN_ENTROPY_FOR_BIPARSE_INCLUSION:
-                        diff = analysis2[0][len(analysis1[0]):]
-                        key = diff, analysis1[1], analysis2[1]
-                        biparse_to_stems[key].add(analysis1[0])
-
-        # Sort biparses by number of stems then diff...
-        biparses = list(biparse_to_stems)
-        biparses.sort(key=lambda x: x[0])
-        biparses.sort(key=lambda x: len(biparse_to_stems.get(x)))
-
-        parses = self.get_parses(affix_side)
+                        diff = stem2[len(stem1):]
+                        biparse_to_stems[diff, sig1, sig2].add(stem1)
 
         # Actual morpheme splitting (if edge entropy is sufficient)...
-        for diff, signature1, signature2 in biparses:
-            if self.get_signature(signature2).get_edge_entropy()   \
+        parses = self.get_parses(affix_side)
+        biographies = self.get_word_biographies(affix_side)
+        func = inspect.currentframe().f_code.co_name
+        for diff, sig1, sig2 in biparse_to_stems:
+            if self.get_signature(sig2).get_edge_entropy()   \
                     >= MIN_ENTROPY_FOR_MORPHEME_SPLITTING:
+                    
+                # Affix name disambiguation...
                 self.name_collisions[diff] += 1
                 disamb_diff = ":%s%i" % (diff, self.name_collisions[diff]+1)
 
                 # Update parses...
-                for affix in self.get_signature(signature1).affixes:
-                    if affix == diff:
-                        parses.add((disamb_diff, NULL_AFFIX))
-                    elif affix.startswith(diff):
-                        parses.add((disamb_diff, affix[len(diff):]))
-                for stem in biparse_to_stems[diff, signature1, signature2]:
+                subst = dict()
+                for affix in self.get_signature(sig1).affixes:
+                    if not affix.startswith(diff):
+                        continue
+                    new_affix = NULL_AFFIX if affix == diff else affix[len(diff):]
+                    parses.add((disamb_diff, new_affix))
+                    subst[affix] = disamb_diff + " " + str(new_affix)
+                for stem in biparse_to_stems[diff, sig1, sig2]:
                     parses.add((stem, disamb_diff))
-                    for affix in self.get_signature(signature2).affixes:
+                    for affix in self.get_signature(sig2).affixes:
                         parses.discard((stem+diff, affix))
-                    for affix in self.get_signature(signature1).affixes:
+                    for affix in self.get_signature(sig1).affixes:
                         if affix.startswith(diff):
                             parses.discard((stem, affix))
+                            new_affix = subst[affix].replace(AFFIX_MARKER, "")
+                            biographies[stem+affix][func] = {(stem, new_affix)}
 
         # Update signatures to reflect parses.
         self.build_signatures(parses, affix_side)
+        
+        # Update word biographies if needed and mark this analysis as run.
+        analyses = self.get_analyses_list(affix_side)
+        for word in biographies:
+            if func not in biographies[word]:
+                biographies[word][func] = biographies[word][analyses[-1]]
+        analyses.append(func)
 
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
                             min_stem_len=MIN_STEM_LEN,
@@ -1555,7 +1565,7 @@ class Signature(tuple):
 
         """
 
-        return AFFIX_DELIMITER.join(str(affix)
+        return AFFIX_DELIMITER.join(str(affix).replace(AFFIX_MARKER, "")
                                     for affix in sorted(self.affixes))
 
     @cached_property
@@ -1762,7 +1772,7 @@ class Family(object):
         shadow_sigs = self.morphology.get_shadow_signatures(self.affix_side)
 
         # Nucleus signature.
-        lines.append("Nucleus:" +
+        lines.append("Nucleus: " +
                      pycrab.utils.format_if_shadow(self.nucleus, shadow_sigs))
 
         # Satellite affix counts...

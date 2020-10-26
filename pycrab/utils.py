@@ -96,9 +96,9 @@ def biograph(func):
         word_biographies = self.get_word_biographies(affix_side)
         for word, parses in word_to_parses.items():
             word_biographies[word][func.__name__] = parses
-        for word in self.word_counts.keys():
-            if word not in word_biographies:
-                word_biographies[word][func.__name__] = {None}
+        # for word in self.word_counts.keys():
+            # if word not in word_biographies:
+                # word_biographies[word][func.__name__] = {None}
         self.get_analyses_list(affix_side).append(func.__name__)
     return wrapper_biograph
 
