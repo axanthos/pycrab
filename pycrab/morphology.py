@@ -1201,7 +1201,7 @@ class Morphology(object):
             if self.get_signature(sig2).get_edge_entropy()   \
                     >= MIN_ENTROPY_FOR_MORPHEME_SPLITTING:
                     
-                # Affix name disambiguation...
+                # Affix name disambiguation... TODO prefix!
                 self.name_collisions[diff] += 1
                 disamb_diff = ":%s%i" % (diff, self.name_collisions[diff]+1)
 
