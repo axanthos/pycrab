@@ -1233,7 +1233,7 @@ class Morphology(object):
         biparse_to_stems = collections.defaultdict(set)
 
         # For each word that has more than 1 analysis...
-        for analyses in word_to_analyses.values():
+        for word, analyses in word_to_analyses.items():
             if len(analyses) > 1:
                         
                 # For each pair of analyses of this word...
@@ -1415,7 +1415,7 @@ class Morphology(object):
         # Widen signatures.
         self.widen_signatures(affix_side)
 
-        # Split morphemes.
+        # Split affixes.
         self.split_affixes(affix_side)
 
         # Create signature families.
