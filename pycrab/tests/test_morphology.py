@@ -264,8 +264,7 @@ class TestMorphology(TestCase):
         wordlist_lower = [word.lower() for word in wordlist]
         my_morphology.learn_from_wordlist(wordlist, True, 1, 1,
                                           affix_side="prefix")
-        mock_find_signatures1.assert_called_with(Counter(wordlist_lower), 1, 1,
-                                                 affix_side="prefix")
+        mock_find_signatures1.assert_called_with(1, 1, affix_side="prefix")
 
     @patch('pycrab.Morphology.find_signatures1')
     def test_learn_from_wordlist_not_lower(self, mock_find_signatures1):
@@ -273,8 +272,7 @@ class TestMorphology(TestCase):
         wordlist = ["Test", "data", "test"]
         my_morphology.learn_from_wordlist(wordlist, False, 1, 1,
                                           affix_side="prefix")
-        mock_find_signatures1.assert_called_with(Counter(wordlist), 1, 1,
-                                                 affix_side="prefix")
+        mock_find_signatures1.assert_called_with(1, 1, affix_side="prefix")
 
     @patch('pycrab.Morphology.learn_from_wordlist')
     def test_learn_from_string(self, mock_learn_from_wordlist):

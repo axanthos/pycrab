@@ -55,7 +55,7 @@ to be added to a biparse."""
 AFFIX_DELIMITER = "="
 """Module-level constant for the delimiter symbol in affix strings."""
 
-AFFIX_MARKER = ":"
+AFFIX_MARKER = ":"  # TODO: use to separate affix from disambiguation index
 """Module-level constant for the symbol that marks affixes when needed."""
 
 TOKENIZATION_REGEX = r"\w+(?u)"
@@ -74,7 +74,7 @@ NULL_AFFIX = NULLAffix()
 class Morphology(object):
     """A class for implementing an entire morphology in pycrab.
 
-    The Morphology class has two attributes, namely a set of suffixal
+    The Morphology class has mainly two attributes, namely a set of suffixal
     signatures and a set of prefixal signatures. Stems, suffixes, and prefixes
     are read-only properties computed on the basis of the signatures, and so
     are suffixal and prefixal parses.
@@ -207,7 +207,6 @@ class Morphology(object):
         - get_families/signatures return sets instead of lists?
         - document word biographies
 
-
     """
 
     def __init__(self, *signatures):
@@ -218,25 +217,40 @@ class Morphology(object):
 
         """
 
-        self.prefixal_signatures = dict()
-        self.suffixal_signatures = dict()
+        self.reset()
         for signature in signatures:
             if signature.affix_side == "prefix":
                 self.prefixal_signatures[signature.affix_string] = signature
             else:
                 self.suffixal_signatures[signature.affix_string] = signature
-        self.prefixal_families = set()
-        self.suffixal_families = set()
-        self.prefixal_protostems = collections.defaultdict(set)
-        self.suffixal_protostems = collections.defaultdict(set)
-        self.prefixal_word_biographies = collections.defaultdict(dict)
-        self.suffixal_word_biographies = collections.defaultdict(dict)
-        self.prefixal_analyses_run = list()
-        self.suffixal_analyses_run = list()
+
+    def reset(self):
+        """Reset all attributes of the morphology.
+
+        Args: none.
+        
+        Returns: nothing.
+
+        """
         self.word_counts = collections.Counter()
+
+        self.prefixal_signatures = dict()
+        self.prefixal_families = set()
+        self.prefixal_protostems = collections.defaultdict(set)
+        self.prefixal_word_biographies = collections.defaultdict(dict)
+        self.prefixal_name_collisions = list()
+        self.prefixal_analyses_run = list()
+
+        self.suffixal_signatures = dict()
+        self.suffixal_families = set()
+        self.suffixal_protostems = collections.defaultdict(set)
+        self.suffixal_word_biographies = collections.defaultdict(dict)
+        self.suffixal_name_collisions = list()
+        self.suffixal_analyses_run = list()
 
     def __eq__(self, other_morphology):
         """Tests for morphology equality."""
+
         if not isinstance(other_morphology, type(self)):
             return False
         if other_morphology.suffixal_signatures != self.suffixal_signatures:
@@ -247,6 +261,7 @@ class Morphology(object):
 
     def __ne__(self, other_morphology):
         """Tests for morphology inequality."""
+
         return not self == other_morphology
 
     def get_families(self, affix_side="suffix"):
@@ -532,7 +547,7 @@ class Morphology(object):
     def get_name_collisions(self, affix_side="suffix"):
         """Returns the name collision counter for suffixes or prefixes.
 
-        Keys are affixes and values are number of affixes with that name 
+        Keys are affixes and values are number of affixes with that name
         (if a collision has already occurred) .
 
         Args:
@@ -977,12 +992,11 @@ class Morphology(object):
         return len(signatures)
 
     @biograph
-    def find_signatures1(self, word_counts, min_stem_len=MIN_STEM_LEN,
+    def find_signatures1(self, min_stem_len=MIN_STEM_LEN,
                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Find initial signatures (using Goldsmith's Lxa-Crab algorithm).
 
         Args:
-            word_counts (Counter): word to count dictionary
             min_stem_len (int, optional): minimum number of letters required in
                 a stem (default is MIN_STEM_LEN).
             min_num_stems (int, optional): minimum number of stems required in
@@ -998,25 +1012,15 @@ class Morphology(object):
 
         protostems = set()
 
-        # Store word counts as attribute.
-        self.word_counts = word_counts
+        # Initialize morphology.
+        self.reset()
 
-        # Select affix side and initialize morphology attributes...
+        # Invert words if needed (if affix side is prefix), then sort them...
         if affix_side == "suffix":
             sorted_words = sorted(list(word_counts))
-            self.suffixal_signatures = dict()
-            self.suffixal_word_biographies = collections.defaultdict(dict)
-            self.suffixal_protostems = collections.defaultdict(set)
-            self.suffixal_name_collisions = collections.Counter()
-            self.suffixal_analyses_run = list()
         else:
             sorted_words = sorted(word[::-1] for word in word_counts)
-            self.prefixal_signatures = dict()
-            self.prefixal_word_biographies = collections.defaultdict(dict)
-            self.prefixal_protostems = collections.defaultdict(set)
-            self.prefixal_name_collisions = collections.Counter()
-            self.prefixal_analyses_run = list()
-
+            
         # For each pair of successive words (in alphabetical order)...
         for idx in range(len(sorted_words)-1):
 
@@ -1178,40 +1182,40 @@ class Morphology(object):
     def split_affixes(self, affix_side="suffix"):
         """Split affixes based on the observation of multiply analyzed words.
 
-        This method relies crucially on a particular data structure called 
-        a "biparse". A biparse connects two signatures by means of a string: 
+        This method relies crucially on a particular data structure called
+        a "biparse". A biparse connects two signatures by means of a string:
         a signature with shorter stems, e.g. "bowl" and "record" (with suffixes
-        NULL=ed=ing=ings=s), and a signature with longer stems, e.g. "bowling" 
+        NULL=ed=ing=ings=s), and a signature with longer stems, e.g. "bowling"
         and "recording" (with suffixes NULL=s); in this example, the connecting
         string, or "string difference", is "ing", which means that there exist
         one or more words that can be parsed by both signatures in the biparse,
-        each of them yielding a pair (short stem, long stem), where the long 
-        stem is the short stem plus the string difference "ing". E.g. the word 
-        "bowling" can be analyzed as the shorter stem "bowl" in the signature 
-        NULL=ed=ing=ings=s or as the long stem "bowling" in the signature 
+        each of them yielding a pair (short stem, long stem), where the long
+        stem is the short stem plus the string difference "ing". E.g. the word
+        "bowling" can be analyzed as the shorter stem "bowl" in the signature
+        NULL=ed=ing=ings=s or as the long stem "bowling" in the signature
         NULL=s, and "bowling" (long stem) is "bowl" (short stem) + "ing" (string
         difference), and likewise for word "recording".
-        
+
         What the method learns from having found a biparse is that those affixes
         of the short stem signature that begin with the string difference can be
-        reanalyzed as sequences of 2 affixes, namely the string difference 
-        itself and a residue which is often an affix in the long stem signature. 
-        In our example, "ing" and "ings" in NULL=ed=ing=ings=s are reanalyzed as 
-        "ing" + NULL and "ing" + "s". In addition, if the string difference 
-        corresponds to an existing affix, we do not make the assumption that 
-        they are one an the same at this point; rather, we disambiguate the 
-        newly discovered affix by adding an integer to it, e.g. "ing2". Thus, 
-        the short stem signature NULL=ed=ing=ings=s is in effect replaced by a 
+        reanalyzed as sequences of 2 affixes, namely the string difference
+        itself and a residue which is often an affix in the long stem signature.
+        In our example, "ing" and "ings" in NULL=ed=ing=ings=s are reanalyzed as
+        "ing" + NULL and "ing" + "s". In addition, if the string difference
+        corresponds to an existing affix, we do not make the assumption that
+        they are one an the same at this point; rather, we disambiguate the
+        newly discovered affix by adding an integer to it, e.g. "ing2". Thus,
+        the short stem signature NULL=ed=ing=ings=s is in effect replaced by a
         new short stem signature NULL=ed=ing2=s, while "ing2" becomes a stem in
-        a signature whose affixes are the "residues" mentioned above, i.e. the 
-        second components in the sequence of affixes resulting from the 
+        a signature whose affixes are the "residues" mentioned above, i.e. the
+        second components in the sequence of affixes resulting from the
         reanalysis of affixes of the short stem signature, namely NULL and "s".
-        
+
         The discovered rule can be summarized as [NULL=ed=ing=s]_ing ==> NULL_s,
-        which means that words that have the affix "ing" found in the signature 
-        NULL=ed=ing=s can have NULL or "s" as a second affix (e.g. "bowlings" 
+        which means that words that have the affix "ing" found in the signature
+        NULL=ed=ing=s can have NULL or "s" as a second affix (e.g. "bowlings"
         can be parsed as "bowl" + "ing2" + "s".
-        
+
         Args:
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
@@ -1228,27 +1232,27 @@ class Morphology(object):
             for parse in sig.parses:
                 stem = parse[1] if affix_side == "prefix" else parse[0]
                 word_to_analyses["".join(parse)].add((stem, sig.affix_string))
-        
+
         # Initialize mapping from biparses to sets of stems.
         biparse_to_stems = collections.defaultdict(set)
 
         # For each word that has more than 1 analysis...
         for word, analyses in word_to_analyses.items():
             if len(analyses) > 1:
-                        
+
                 # For each pair of analyses of this word...
                 pairs_of_analyses = itertools.combinations(sorted(analyses,
                         key=lambda x: len(x[0])), 2)
                 for pair_of_analyses in pairs_of_analyses:
                     short_stem, short_stem_sig = pair_of_analyses[0]
                     long_stem, long_stem_sig = pair_of_analyses[1]
-                    
+
                     # If edge entropy of longer stem analysis exceeds threshold...
-                    long_stem_sig_object = self.get_signature(long_stem_sig, 
+                    long_stem_sig_object = self.get_signature(long_stem_sig,
                                                               affix_side)
                     if long_stem_sig_object.get_edge_entropy()    \
                             >= MIN_ENTROPY_FOR_BIPARSE_INCLUSION:
-                        
+
                         # Compute diff and associate short stem to biparse...
                         if affix_side == "suffix":
                             diff = long_stem[len(short_stem):]
@@ -1256,24 +1260,24 @@ class Morphology(object):
                             diff = long_stem[:-len(short_stem)]
                         key = diff, short_stem_sig, long_stem_sig
                         biparse_to_stems[key].add(short_stem)
-                        
+
                         # TODO: store for later output
-                        print("%s\t"*5 % (diff, short_stem, short_stem_sig, 
+                        print("%s\t"*5 % (diff, short_stem, short_stem_sig,
                                           long_stem, long_stem_sig))
 
         # Get current state of parses, word biographies and name collisions...
         parses = self.get_parses(affix_side)
         biographies = self.get_word_biographies(affix_side)
         collisions = self.get_name_collisions(affix_side)
-        
+
         # Get the name of this function (to update biographies).
         func = inspect.currentframe().f_code.co_name
-        
+
         # For each stored biparse and associated short stems
         for (biparse, short_stems) in biparse_to_stems.items():
             diff, short_stem_sig, long_stem_sig = biparse
-        
-            # Disambiguate diff if needed and add affix marker...            
+
+            # Disambiguate diff if needed and add affix marker...
             disamb_diff = diff
             if collisions[diff] or diff in self.get_affixes(affix_side):
                 disamb_diff += "%i" % (collisions[diff]+2)
@@ -1297,7 +1301,7 @@ class Morphology(object):
                     new_long_stem_sig.add(affix[:-len(diff)])
                 else:
                     new_short_stem_sig.add(affix)
-                
+
             # TODO: Store for later output
             print("[%s]_%s\t==>\t%s\t%s\t%s\t%s" % ((
                 AFFIX_DELIMITER.join(str(af) for af in sorted(new_short_stem_sig)),
@@ -1307,23 +1311,23 @@ class Morphology(object):
                 long_stem_sig,
                 short_stems,
             )))
-            
+
             # Initialize dict for storing rewrite rules (for biographies).
-            rewrite = dict()            
-            
+            rewrite = dict()
+
             # Utility unction for switching morphemes depending on affix side...
             def switch_if_needed(my_tuple, affix_side="suffix"):
                 if affix_side == "prefix":
                     return tuple(reversed(my_tuple))
                 else:
                     return my_tuple
-                
+
             # Create new parse for diff + each affix in new long stem sig...
             for affix in new_long_stem_sig:
                 new_parse = switch_if_needed((disamb_diff, affix), affix_side)
                 parses.add(new_parse)
                 print("1: added parse", *new_parse)
-                
+
                 # Store corresponding rewrite rule (for biographies)
                 to_rewrite = affix+diff if affix_side == "prefix" else diff+affix
                 rewrite[to_rewrite] = str(new_parse[0]) + " " + str(new_parse[1])
@@ -1331,22 +1335,22 @@ class Morphology(object):
 
             # For each short stem associated with this biparse...
             for stem in short_stems:
-            
+
                 # Create new parse for stem + disambiguated diff...
                 new_parse = switch_if_needed((stem, disamb_diff), affix_side)
                 parses.add(new_parse)
                 print("2: added parse", *new_parse)
-                
+
                 # Discard all parses in long stem signature...
                 for affix in long_stem_sig_object.affixes:
-                    stem_and_diff = "".join(switch_if_needed((stem, diff), 
+                    stem_and_diff = "".join(switch_if_needed((stem, diff),
                                                              affix_side))
-                    old_parse = switch_if_needed((stem_and_diff, affix), 
+                    old_parse = switch_if_needed((stem_and_diff, affix),
                                                  affix_side)
                     parses.discard(old_parse)
                     print("3: discarded parse", *old_parse)
-                    
-                # In short stem signature, discard all parses whose suffix 
+
+                # In short stem signature, discard all parses whose suffix
                 # starts with diff (or whose prefix ends with diff)...
                 for affix in short_stem_sig_object.affixes:
                     if ((affix_side == "suffix" and affix.startswith(diff))
@@ -1365,7 +1369,7 @@ class Morphology(object):
 
         # Update signatures to reflect parses.
         self.build_signatures(parses, affix_side)
-        
+
         # Update remaining word biographies and mark this analysis as run...
         analyses = self.get_analyses_list(affix_side)
         for word in biographies:
@@ -1399,19 +1403,25 @@ class Morphology(object):
 
         Returns: nothing.
 
+        Todo: figure out how we want to call the other learning functions than
+        find_signature1 for both affix sides (like we do for find_signature1).
+        
         """
 
         # Lowercase words if needed...
         if lowercase_input:
             wordlist = [word.lower() for word in wordlist]
 
-        # Count words.
-        word_counts = collections.Counter(wordlist)
+        # Count words and store word counts as attribute.
+        self.word_counts = collections.Counter(wordlist)
 
-        # Find signatures based on words (stored in word_counts).
-        self.find_signatures1(word_counts, min_stem_len, min_num_stems,
-                              affix_side=affix_side)
+        # Find suffixal signatures.
+        self.find_signatures1(min_stem_len, min_num_stems)
 
+        # Find prefixal signatures.
+        self.find_signatures1(min_stem_len, min_num_stems,
+                              affix_side="prefix")
+        
         # Widen signatures.
         self.widen_signatures(affix_side)
 

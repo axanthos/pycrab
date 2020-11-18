@@ -5,6 +5,8 @@
 
 This module provides functionality for command-line usage of pycrab.
 
+Todo:
+    - change defaults for lowercase and min_stem_len, and shortcut for lowercase
 """
 
 import argparse
