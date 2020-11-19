@@ -94,7 +94,7 @@ def biograph(func):
         else:
             affix_side = "suffix"
         
-        successors = defaultdict(set)
+        successors = collections.defaultdict(set)
         for bigrams in self.get_bigrams(affix_side):
             
         

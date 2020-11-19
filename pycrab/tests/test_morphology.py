@@ -29,6 +29,11 @@ __email__ = "aris.xanthos@unil.ch"
 __status__ = "development"
 
 
+def add_index(string, index):
+    """Helper function for adding indexes to affixes."""
+    return "%s%s%i" % (string, morphology.AFFIX_INDEX_DELIMITER, index)
+
+
 class TestMorphology(TestCase):
 
     def setUp(self):
@@ -100,24 +105,21 @@ class TestMorphology(TestCase):
         self.assertTrue(self.morphology != other_morphology)
 
     def test_add_prefixal_signature(self):
-        signature = morphology.Signature(
-                stems=["do", "wind"],
-                affixes=["un", "re"],
-                affix_side="prefix",
-        )
+        affixes = ["un", "re"]
+        signature = morphology.Signature(stems=["do", "wind"],
+                affixes=[add_index(a, 1) for a in affixes], affix_side="prefix")
         other_morphology = morphology.Morphology()
-        other_morphology.add_signature(signature.stems, signature.affixes,
+        other_morphology.add_signature(signature.stems, affixes,
                                        affix_side="prefix")
         self.assertTrue(other_morphology.get_signature(signature.affix_string,
                         affix_side="prefix") == signature)
 
     def test_add_suffixal_signature(self):
-        signature = morphology.Signature(
-                stems=["cr", "dr"],
-                affixes=["y", "ied"],
-        )
+        affixes = ["y", "ied"]
+        signature = morphology.Signature(stems=["cr", "dr"],
+                affixes=[add_index(a, 1) for a in affixes])
         other_morphology = morphology.Morphology()
-        other_morphology.add_signature(signature.stems, signature.affixes)
+        other_morphology.add_signature(signature.stems, affixes)
         self.assertTrue(other_morphology.get_signature(signature.affix_string)
                         == signature)
 
@@ -354,7 +356,7 @@ class TestMorphology(TestCase):
 
     def test_build_suffixal_signatures(self):
         existing_morphology = morphology.Morphology()
-        parses = {
+        bigrams = {
             ("want", morphology.NULL_AFFIX),
             ("want", "ed"),
             ("want", "ing"),
@@ -368,22 +370,17 @@ class TestMorphology(TestCase):
             ("boot", morphology.NULL_AFFIX),    # 'boot' should not be retained
             ("boot", "s")                       # because min_num_stems=2
         }
-        expected_morphology = morphology.Morphology(
-            morphology.Signature(
-                stems=["want", "add"],
-                affixes=[morphology.NULL_AFFIX, "ed", "ing"],
-            ),
-            morphology.Signature(
-                stems=["cr", "dr"],
-                affixes=["y", "ied"],
-            ),
-        )
-        existing_morphology.build_signatures(parses, min_num_stems=2)
+        expected_morphology = morphology.Morphology()
+        expected_morphology.add_signature(stems=["want", "add"],
+                affixes=[morphology.NULL_AFFIX, "ed", "ing"])
+        expected_morphology.add_signature(stems=["cr", "dr"],
+                affixes=["y", "ied"])
+        existing_morphology.build_signatures(bigrams, min_num_stems=2)
         self.assertTrue(existing_morphology == expected_morphology)
 
     def test_build_prefixal_signatures(self):
         existing_morphology = morphology.Morphology()
-        parses = {
+        bigrams = {
             ("un", "do"),
             ("re", "do"),
             ("un", "wind"),
@@ -394,30 +391,22 @@ class TestMorphology(TestCase):
             ("re", "create"),
             ("dis", "able"),    # 'able' should be retained (min_num_stems=1)
         }
-        expected_morphology = morphology.Morphology(
-            morphology.Signature(
-                stems=["do", "wind"],
-                affixes=["un", "re"],
-                affix_side="prefix",
-            ),
-            morphology.Signature(
-                stems=["make", "create"],
-                affixes=["re", morphology.NULL_AFFIX],
-                affix_side="prefix",
-            ),
-            morphology.Signature(
-                stems=["able"],
-                affixes=["dis"],
-                affix_side="prefix",
-            ),
-        )
-        existing_morphology.build_signatures(parses, affix_side="prefix",
+        expected_morphology = morphology.Morphology()
+        expected_morphology.add_signature(stems=["do", "wind"],
+                                          affixes=["un", "re"],
+                                          affix_side="prefix")
+        expected_morphology.add_signature(stems=["make", "create"],
+                                          affixes=["re", morphology.NULL_AFFIX],
+                                          affix_side="prefix")
+        expected_morphology.add_signature(stems=["able"], affixes=["dis"],
+                                          affix_side="prefix")
+        existing_morphology.build_signatures(bigrams, affix_side="prefix",
                                              min_num_stems=1)
         self.assertTrue(existing_morphology == expected_morphology)
 
     def test_build_signatures_word_counts(self):
         existing_morphology = morphology.Morphology()
-        parses = {
+        bigrams = {
             ("dr", "y"),
             ("dr", "ied"),
             ("cr", "y"),
@@ -425,11 +414,10 @@ class TestMorphology(TestCase):
         }
         existing_morphology.word_counts = {"dry": 2, "cry": 1,
                                            "dried": 1, "cried": 1}
-        expected_morphology = morphology.Morphology(
-            morphology.Signature(
-                stems={"cr": 2, "dr": 3},
-                affixes={"y": 3, "ied": 2},
-            ),
-        )
-        existing_morphology.build_signatures(parses, min_num_stems=2)
+        existing_morphology.build_signatures(bigrams, min_num_stems=2)
+        expected_morphology = morphology.Morphology()
+        expected_morphology.add_signature(stems={"cr": 2, "dr": 3},
+                                          affixes={"y": 3, "ied": 2})
+        # print(existing_morphology.suffixal_signatures)
+        # print(expected_morphology.suffixal_signatures)
         self.assertTrue(existing_morphology == expected_morphology)

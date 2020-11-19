@@ -55,8 +55,8 @@ to be added to a biparse."""
 AFFIX_DELIMITER = "="
 """Module-level constant for the delimiter symbol in affix strings."""
 
-AFFIX_MARKER = ":"  # TODO: use to separate affix from disambiguation index
-"""Module-level constant for the symbol that marks affixes when needed."""
+AFFIX_INDEX_DELIMITER = ":"
+"""Module-level constant for the symbol that separates affixes from indexes."""
 
 TOKENIZATION_REGEX = r"\w+(?u)"
 """Module-level constant for the regex pattern used to tokenize text."""
@@ -228,7 +228,7 @@ class Morphology(object):
         """Reset all attributes of the morphology.
 
         Args: none.
-        
+
         Returns: nothing.
 
         """
@@ -238,14 +238,14 @@ class Morphology(object):
         self.prefixal_families = set()
         self.prefixal_protostems = collections.defaultdict(set)
         self.prefixal_word_biographies = collections.defaultdict(dict)
-        self.prefixal_name_collisions = list()
+        self.prefixal_name_collisions = collections.Counter()
         self.prefixal_analyses_run = list()
 
         self.suffixal_signatures = dict()
         self.suffixal_families = set()
         self.suffixal_protostems = collections.defaultdict(set)
         self.suffixal_word_biographies = collections.defaultdict(dict)
-        self.suffixal_name_collisions = list()
+        self.suffixal_name_collisions = collections.Counter()
         self.suffixal_analyses_run = list()
 
     def __eq__(self, other_morphology):
@@ -361,6 +361,33 @@ class Morphology(object):
             raise ValueError(("No %sal signature matches the requested "
                               + "affix string") % affix_side)
 
+    def add_new_index(self, affix, affix_side="suffix"):
+        """Returns a name with a new, unique index for a given non-NULL affix.
+
+        Args:
+            affix (string): the affix for which a new index is required.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            string.
+
+        Todo: test
+
+        """
+
+        if affix == NULL_AFFIX:
+            return affix
+
+        if affix_side == "prefix":
+            self.prefixal_name_collisions[affix] += 1
+            return "%s%s%i" % (affix, AFFIX_INDEX_DELIMITER,
+                               self.prefixal_name_collisions[affix])
+        else:
+            self.suffixal_name_collisions[affix] += 1
+            return "%s%s%i" % (affix, AFFIX_INDEX_DELIMITER,
+                               self.suffixal_name_collisions[affix])
+
     def add_signature(self, stems, affixes, affix_side="suffix"):
         """Adds a signature to the morphology.
 
@@ -379,7 +406,16 @@ class Morphology(object):
 
         """
 
-        signature = Signature(stems, affixes, affix_side)
+        # Add indexes to affixes...
+        if type(affixes) == dict or type(affixes) == collections.Counter:
+            indexed_affixes = dict()
+            for affix, count in affixes.items():
+                indexed_affixes[self.add_new_index(affix)] = count
+        else:
+            indexed_affixes = [self.add_new_index(affix) for affix in affixes]
+
+        # Store signature...
+        signature = Signature(stems, indexed_affixes, affix_side)
         if affix_side == "prefix":
             self.prefixal_signatures[signature.affix_string] = signature
         else:
@@ -525,7 +561,7 @@ class Morphology(object):
         return self.get_bigrams(affix_side="prefix")
 
     def get_bigrams(self, affix_side="suffix"):
-        """Construct a set of morpheme bigrams based on all signatures of a 
+        """Construct a set of morpheme bigrams based on all signatures of a
         given type.
 
         bigrams are pairs (prefix, stem) or (stem, suffix), depending on
@@ -544,26 +580,6 @@ class Morphology(object):
         for signature in self.get_signatures(affix_side):
             bigrams.update(signature.bigrams)
         return bigrams
-
-    def get_name_collisions(self, affix_side="suffix"):
-        """Returns the name collision counter for suffixes or prefixes.
-
-        Keys are affixes and values are number of affixes with that name
-        (if a collision has already occurred) .
-
-        Args:
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns:
-            list of strings.
-
-        """
-
-        if affix_side == "prefix":
-            return self.prefixal_name_collisions
-        else:
-            return self.suffixal_name_collisions
 
     def get_analyses_list(self, affix_side="suffix"):
         """Returns the list of analyses run on suffixes or prefixes.
@@ -945,7 +961,7 @@ class Morphology(object):
 
     def build_signatures(self, bigrams, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
-        """Construct all signatures of a given type based on a set of morpheme 
+        """Construct all signatures of a given type based on a set of morpheme
         bigrams.
 
         Args:
@@ -1022,7 +1038,7 @@ class Morphology(object):
             sorted_words = sorted(list(word_counts))
         else:
             sorted_words = sorted(word[::-1] for word in word_counts)
-            
+
         # For each pair of successive words (in alphabetical order)...
         for idx in range(len(sorted_words)-1):
 
@@ -1362,7 +1378,7 @@ class Morphology(object):
                         print("4: discarded parse", *old_parse)
 
                         # Apply rewrite rules and update relevant biographies...
-                        affix_seq = rewrite[affix].replace(AFFIX_MARKER, "")
+                        affix_seq = rewrite[affix].replace(":", "")
                         to_rewrite = affix+stem if affix_side == "prefix"   \
                                      else stem+affix
                         new_analysis = switch_if_needed((stem, affix_seq),
@@ -1407,7 +1423,7 @@ class Morphology(object):
 
         Todo: figure out how we want to call the other learning functions than
         find_signature1 for both affix sides (like we do for find_signature1).
-        
+
         """
 
         # Lowercase words if needed...
@@ -1423,7 +1439,7 @@ class Morphology(object):
         # Find prefixal signatures.
         self.find_signatures1(min_stem_len, min_num_stems,
                               affix_side="prefix")
-        
+
         # Widen signatures.
         self.widen_signatures(affix_side)
 
@@ -1717,8 +1733,7 @@ class Signature(tuple):
 
         """
 
-        return AFFIX_DELIMITER.join(str(affix).replace(AFFIX_MARKER, "")
-                                    for affix in sorted(self.affixes))
+        return AFFIX_DELIMITER.join(str(affix) for affix in sorted(self.affixes))
 
     @cached_property
     def example_stem(self):
