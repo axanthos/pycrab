@@ -324,8 +324,8 @@ class TestMorphology(TestCase):
         self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
                          (expected_stem_counts, expected_affix_counts))
 
-    def test_suffixal_parses(self):
-        expected_parses = {
+    def test_suffixal_bigrams(self):
+        expected_bigrams = {
             ("want", morphology.NULL_AFFIX),
             ("want", "ed"),
             ("want", "ing"),
@@ -337,10 +337,10 @@ class TestMorphology(TestCase):
             ("cr", "y"),
             ("cr", "ied"),
         }
-        self.assertEqual(self.morphology.suffixal_parses, expected_parses)
+        self.assertEqual(self.morphology.suffixal_bigrams, expected_bigrams)
 
-    def test_prefixal_parses(self):
-        expected_parses = {
+    def test_prefixal_bigrams(self):
+        expected_bigrams = {
             ("un", "do"),
             ("re", "do"),
             ("un", "wind"),
@@ -350,7 +350,7 @@ class TestMorphology(TestCase):
             (morphology.NULL_AFFIX, "create"),
             ("re", "create"),
         }
-        self.assertEqual(self.morphology.prefixal_parses, expected_parses)
+        self.assertEqual(self.morphology.prefixal_bigrams, expected_bigrams)
 
     def test_build_suffixal_signatures(self):
         existing_morphology = morphology.Morphology()

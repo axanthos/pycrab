@@ -84,14 +84,20 @@ def biograph(func):
     @functools.wraps(func)
     def wrapper_biograph(self, *args, **kwargs):
         func(self, *args, **kwargs)
+        
         word_to_parses = collections.defaultdict(set)
+        
         if "affix_side" in kwargs:
             affix_side = kwargs["affix_side"]
         elif "prefix" in args:
             affix_side = "prefix"
         else:
             affix_side = "suffix"
-        for parse in self.get_parses(affix_side):
+        
+        successors = defaultdict(set)
+        for bigrams in self.get_bigrams(affix_side):
+            
+        
             word_to_parses["".join(parse)].add(parse)
         word_biographies = self.get_word_biographies(affix_side)
         for word, parses in word_to_parses.items():

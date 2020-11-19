@@ -77,7 +77,7 @@ class Morphology(object):
     The Morphology class has mainly two attributes, namely a set of suffixal
     signatures and a set of prefixal signatures. Stems, suffixes, and prefixes
     are read-only properties computed on the basis of the signatures, and so
-    are suffixal and prefixal parses.
+    are suffixal and prefixal morpheme bigrams.
 
     Examples:
 
@@ -192,11 +192,11 @@ class Morphology(object):
         {NULL, 'ing', 'ed', 'y', 'ied'}
         >>> morphology.prefixes
         {NULL, 'un', 're'}
-        >>> morphology.suffixal_parses
+        >>> morphology.suffixal_bigrams
         {('cr', 'ied'), ('want', NULL), ('dr', 'y'), ('cr', 'y'),
         ('add', 'ed'), ('dr', 'ied'), ('want', 'ed'), ('add', NULL),
         ('add', 'ing'), ('want', 'ing')}
-        >>> morphology.prefixal_parses
+        >>> morphology.prefixal_bigrams
         {(NULL, 'create'), ('re', 'make'), ('un', 'wind'), ('re', 'do'),
         ('re', 'create'), (NULL, 'make'), ('un', 'do'), ('re', 'wind')}
 
@@ -493,10 +493,10 @@ class Morphology(object):
         return affixes
 
     @property
-    def suffixal_parses(self):
-        """Construct a set of parses based on all suffixal signatures.
+    def suffixal_bigrams(self):
+        """Construct a set of bigrams based on all suffixal signatures.
 
-        Parses are pairs (stem, suffix).
+        bigrams are pairs (stem, suffix).
 
         Args:
             none.
@@ -506,13 +506,13 @@ class Morphology(object):
 
         """
 
-        return self.get_parses()
+        return self.get_bigrams()
 
     @property
-    def prefixal_parses(self):
-        """Construct a set of parses based on all prefixal signatures.
+    def prefixal_bigrams(self):
+        """Construct a set of morpheme bigrams based on all prefixal signatures.
 
-        Parses are pairs (prefix, stem).
+        bigrams are pairs (prefix, stem).
 
         Args:
             none.
@@ -522,12 +522,13 @@ class Morphology(object):
 
         """
 
-        return self.get_parses(affix_side="prefix")
+        return self.get_bigrams(affix_side="prefix")
 
-    def get_parses(self, affix_side="suffix"):
-        """Construct a set of parses based on all signatures of a given type.
+    def get_bigrams(self, affix_side="suffix"):
+        """Construct a set of morpheme bigrams based on all signatures of a 
+        given type.
 
-        Parses are pairs (prefix, stem) or (stem, suffix), depending on
+        bigrams are pairs (prefix, stem) or (stem, suffix), depending on
         affix_side arg.
 
         Args:
@@ -539,10 +540,10 @@ class Morphology(object):
 
         """
 
-        parses = set()
+        bigrams = set()
         for signature in self.get_signatures(affix_side):
-            parses.update(signature.parses)
-        return parses
+            bigrams.update(signature.bigrams)
+        return bigrams
 
     def get_name_collisions(self, affix_side="suffix"):
         """Returns the name collision counter for suffixes or prefixes.
@@ -692,13 +693,13 @@ class Morphology(object):
         ))
 
         # Number of analyzed words...
-        parses = self.get_parses(affix_side)
-        lines.append("%-45s %10i" % ("Number of analyzed words:", len(parses)))
+        bigrams = self.get_bigrams(affix_side)
+        lines.append("%-45s %10i" % ("Number of analyzed words:", len(bigrams)))
 
         # Total number of letters in analyzed words.
         lines.append("%-45s %10i" % (
             "Total number of letters in analyzed words:",
-            sum(len(parse[0]) + len(parse[1]) for parse in parses),
+            sum(len(bigram[0]) + len(bigram[1]) for bigram in bigrams),
         ))
 
         lines.append("")
@@ -840,15 +841,15 @@ class Morphology(object):
             return("Morphology contains no words.")
 
         # Get continuations of stems...
-        parses = self.get_parses(affix_side)
+        bigrams = self.get_bigrams(affix_side)
         continuations = collections.defaultdict(set)
         analyzed_words = set()
         if affix_side == "prefix":
-            for prefix, stem in parses:
+            for prefix, stem in bigrams:
                 continuations[stem].add(prefix)
                 analyzed_words.add(prefix + stem)
         else:
-            for stem, suffix in parses:
+            for stem, suffix in bigrams:
                 continuations[stem].add(suffix)
                 analyzed_words.add(stem + suffix)
 
@@ -889,8 +890,8 @@ class Morphology(object):
             for func in self.get_analyses_list(affix_side):
                 lines.append("\t" + func + ":")
                 try:
-                    for parse in sorted(biography[func]):
-                        lines.append("\t\t%s %s" % parse)
+                    for analysis in sorted(biography[func]):
+                        lines.append("\t\t%s" % " ".join(analysis))
                 except KeyError:
                     lines.append("\t\tunanalyzed")
         return "\n".join(lines)
@@ -942,12 +943,13 @@ class Morphology(object):
                 affix_counts[affix] += word_count
         return stem_counts, affix_counts
 
-    def build_signatures(self, parses, affix_side="suffix",
+    def build_signatures(self, bigrams, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
-        """Construct all signatures of a given type based on a set of parses.
+        """Construct all signatures of a given type based on a set of morpheme 
+        bigrams.
 
         Args:
-            parses (set): pairs (prefix, stem) or (stem, suffix), depending on
+            bigrams (set): pairs (prefix, stem) or (stem, suffix), depending on
                 affix_side arg.
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
@@ -967,10 +969,10 @@ class Morphology(object):
         # List all possible affixes of each stem...
         affixes = collections.defaultdict(list) # TODO: set instead of list?
         if affix_side == "suffix":
-            for stem, suffix in parses:
+            for stem, suffix in bigrams:
                 affixes[stem].append(suffix)
         else:
-            for prefix, stem in parses:
+            for prefix, stem in bigrams:
                 affixes[stem].append(prefix)
 
         # Find all stems associated with each affix list...
@@ -984,7 +986,7 @@ class Morphology(object):
             if len(stems) >= min_num_stems:     # Require min number of stems.
                 if self.word_counts:
                     stem_counts, affix_counts = self.get_stem_and_affix_count(
-                        stems, affixes, affix_side=affix_side)
+                            stems, affixes, affix_side=affix_side)
                     self.add_signature(stem_counts, affix_counts, affix_side)
                 else:   # If no word counts are available yet...
                     self.add_signature(stems, affixes, affix_side)
@@ -1143,8 +1145,8 @@ class Morphology(object):
 
         """
 
-        # Get current parses and protostems.
-        parses = self.get_parses(affix_side)
+        # Get current bigrams and protostems.
+        bigrams = self.get_bigrams(affix_side)
         protostems = self.get_protostems(affix_side)
 
         # Initialize list of protostems previously added to a signature.
@@ -1167,17 +1169,17 @@ class Morphology(object):
                 # If this protostem can have all affixes in this signature...
                 if affixes.issubset(continuations):
 
-                    # Create new parses and remove them from unanalyzed stuff...
+                    # Create new bigrams and remove them from unanalyzed stuff...
                     for affix in affixes:
-                        parses.add((affix, protostem) if affix_side == "prefix"
+                        bigrams.add((affix, protostem) if affix_side == "prefix"
                                    else (protostem, affix))
                         protostems[protostem].remove(affix)
 
                     # Flag protostem as previously added to a signature...
                     previously_added.add(protostem)
 
-        # Update signatures to reflect parses.
-        self.build_signatures(parses, affix_side)
+        # Update signatures to reflect bigrams.
+        self.build_signatures(bigrams, affix_side)
 
     def split_affixes(self, affix_side="suffix"):
         """Split affixes based on the observation of multiply analyzed words.
@@ -1570,7 +1572,7 @@ class Signature(tuple):
         'NULL=ed=ing'
         >>> sig.robustness
         19
-        >>> sig.parses
+        >>> sig.bigrams
         {('add', NULL), ('add', 'ed'), ('add', 'ing'), ('want', 'ing'),
         ('want', 'ed'), ('want', NULL)}
         >>> sig.get_edge_entropy()
@@ -1663,7 +1665,7 @@ class Signature(tuple):
         lines.append("-" * 24)
 
         # Number of letters in words or as analyzed...
-        letters_in_words = sum(len(st)+len(af) for st, af in self.parses)
+        letters_in_words = sum(len(m1)+len(m2) for m1, m2 in self.bigrams)
         lines.append("\n    Letters in words if unanalyzed: %10i"
                      % letters_in_words)
         lines.append("               Letters as analyzed: %10i"
@@ -1776,10 +1778,10 @@ class Signature(tuple):
         return saved_stem_length + saved_affix_length
 
     @cached_property
-    def parses(self):
-        """Construct a set of parses using the signature's stems and affixes.
+    def bigrams(self):
+        """Construct a set of morpheme bigrams using stems and affixes.
 
-        Parses are pairs (prefix, stem) or (stem, suffix).
+        bigrams are pairs (prefix, stem) or (stem, suffix).
 
         Args:
             none.
@@ -1788,10 +1790,10 @@ class Signature(tuple):
             set of tuples.
 
         """
-        return self._compute_parses()
+        return self._compute_bigrams()
 
-    def _compute_parses(self):
-        """Construct a set of parses using the signature's stems and affixes.
+    def _compute_bigrams(self):
+        """Construct a set of morpheme bigrams using stems and affixes.
 
         Args:
             none.
