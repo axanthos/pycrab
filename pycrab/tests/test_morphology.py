@@ -326,6 +326,17 @@ class TestMorphology(TestCase):
         self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
                          (expected_stem_counts, expected_affix_counts))
 
+    def test_add_new_index_initial(self):
+        my_morphology = morphology.Morphology()
+        expected_affix = "af:1".replace(":", morphology.AFFIX_INDEX_DELIMITER)
+        self.assertEqual(my_morphology.add_new_index("af"), expected_affix)
+        
+    def test_add_new_index_subsequent(self):
+        my_morphology = morphology.Morphology()
+        my_morphology.add_new_index("af")
+        expected_affix = "af:2".replace(":", morphology.AFFIX_INDEX_DELIMITER)
+        self.assertEqual(my_morphology.add_new_index("af"), expected_affix)
+        
     def test_suffixal_bigrams(self):
         expected_bigrams = {
             ("want", morphology.NULL_AFFIX),
