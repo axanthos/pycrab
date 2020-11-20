@@ -947,6 +947,8 @@ class Morphology(object):
         Returns:
             pair of collection.Counter object (stem and affix count).
 
+        Todo: This will no longer work as is after split_affixes!
+
         """
 
         stem_counts = collections.Counter()
@@ -1030,14 +1032,11 @@ class Morphology(object):
 
         protostems = set()
 
-        # Initialize morphology.
-        self.reset()
-
         # Invert words if needed (if affix side is prefix), then sort them...
         if affix_side == "suffix":
-            sorted_words = sorted(list(word_counts))
+            sorted_words = sorted(list(self.word_counts))
         else:
-            sorted_words = sorted(word[::-1] for word in word_counts)
+            sorted_words = sorted(word[::-1] for word in self.word_counts)
 
         # For each pair of successive words (in alphabetical order)...
         for idx in range(len(sorted_words)-1):
@@ -1060,6 +1059,8 @@ class Morphology(object):
         for protostem, continuation in continuations.items():
             protostem_lists[tuple(sorted(continuation))].add(protostem)
 
+        bigrams = set()
+
         # For each continuation list...
         for continuations, protostems in protostem_lists.items():
 
@@ -1075,18 +1076,22 @@ class Morphology(object):
             # If continuation list has min_num_stems stems or more...
             if len(protostems) >= min_num_stems:
 
-                # Get stem and affix counts...
-                stem_counts, affix_counts = self.get_stem_and_affix_count(
-                    protostems, continuations, affix_side=affix_side)
-
-                # Create and store signature.
-                self.add_signature(stems=stem_counts, affixes=affix_counts,
-                                   affix_side=affix_side)
+                # Store all corresponding morpheme bigrams...
+                if affix_side == "suffix":
+                    new_bigrams = set(itertools.product(protostems,
+                                                        continuations))
+                else:
+                    new_bigrams = set(itertools.product(continuations,
+                                                        protostems))
+                bigrams = bigrams.union(new_bigrams)
 
             # Store remaining protostems for later analysis...
             else:
                 self.get_protostems(affix_side).update({p: set(continuations)
                                                         for p in protostems})
+
+        # Create signatures based on stored bigrams.
+        self.build_signatures(bigrams, affix_side)
 
     def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
                         min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
@@ -1426,6 +1431,9 @@ class Morphology(object):
 
         """
 
+        # Initialize morphology.
+        self.reset()
+
         # Lowercase words if needed...
         if lowercase_input:
             wordlist = [word.lower() for word in wordlist]
@@ -1441,13 +1449,13 @@ class Morphology(object):
                               affix_side="prefix")
 
         # Widen signatures.
-        self.widen_signatures(affix_side)
+        #self.widen_signatures(affix_side)
 
         # Split affixes.
-        self.split_affixes(affix_side)
+        # self.split_affixes(affix_side)
 
         # Create signature families.
-        self.create_families(num_seed_families, min_robustness, affix_side)
+        #self.create_families(num_seed_families, min_robustness, affix_side)
 
 
     def learn_from_string(self, input_string,
