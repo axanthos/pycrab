@@ -57,6 +57,9 @@ class TestMorphology(TestCase):
                 affix_side="prefix",
             ),
         )
+        self.morphology.suffixal_word_biographies["added"]["dummy_func"] =  \
+                ("add", "ed")
+        self.morphology.suffixal_analyses_run.append("dummy_func")
 
     def test_morphology_equality(self):
         other_morphology = morphology.Morphology(
@@ -331,12 +334,14 @@ class TestMorphology(TestCase):
         expected_affix = "af:1".replace(":", morphology.AFFIX_INDEX_DELIMITER)
         self.assertEqual(my_morphology.add_new_index("af"), expected_affix)
         
-    def test_add_new_index_subsequent(self):
-        my_morphology = morphology.Morphology()
-        my_morphology.add_new_index("af")
-        expected_affix = "af:2".replace(":", morphology.AFFIX_INDEX_DELIMITER)
-        self.assertEqual(my_morphology.add_new_index("af"), expected_affix)
-        
+    def test_get_current_parses_analyzed_word(self):
+        self.assertEqual(self.morphology.get_current_parses("added"), 
+                         ("add", "ed"))
+    
+    def test_get_current_parses_unanalyzed_word(self):
+        self.assertEqual(self.morphology.get_current_parses("unanalyzed"), 
+                         ("unanalyzed"))
+    
     def test_suffixal_bigrams(self):
         expected_bigrams = {
             ("want", morphology.NULL_AFFIX),

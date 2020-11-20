@@ -361,6 +361,31 @@ class Morphology(object):
             raise ValueError(("No %sal signature matches the requested "
                               + "affix string") % affix_side)
 
+    def get_current_parses(self, word, affix_side="suffix"):
+        """Returns the parses currently associated with a given word.
+
+        Args:
+            word (string): the word whose parses are requested.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            a set of parses (i.e. lists of strings).
+
+        """
+
+        try:
+            last_analysis_run = self.get_analyses_list(affix_side)[-1]
+        except IndexError:
+            return word
+        try:
+            if affix_side == "prefix":
+                return self.prefixal_word_biographies[word][last_analysis_run]
+            else:
+                return self.suffixal_word_biographies[word][last_analysis_run]
+        except KeyError:
+            return word
+
     def add_new_index(self, affix, affix_side="suffix"):
         """Returns a name with a new, unique index for a given non-NULL affix.
 
