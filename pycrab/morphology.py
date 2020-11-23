@@ -24,7 +24,7 @@ import re
 from cached_property import cached_property
 from pycrab.null_affix import NULLAffix
 import pycrab.utils
-from pycrab.utils import ImmutableDict, biograph
+from pycrab.utils import ImmutableDict
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -377,74 +377,14 @@ class Morphology(object):
         try:
             last_analysis_run = self.get_analyses_list(affix_side)[-1]
         except IndexError:
-            return word
+            return {word}
         try:
             if affix_side == "prefix":
                 return self.prefixal_word_biographies[word][last_analysis_run]
             else:
                 return self.suffixal_word_biographies[word][last_analysis_run]
         except KeyError:
-            return word
-
-    def add_new_index(self, affix, affix_side="suffix"):
-        """Returns a name with a new, unique index for a given non-NULL affix.
-
-        Args:
-            affix (string): the affix for which a new index is required.
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns:
-            string.
-
-        Todo: test
-
-        """
-
-        if affix == NULL_AFFIX:
-            return affix
-
-        if affix_side == "prefix":
-            self.prefixal_name_collisions[affix] += 1
-            return "%s%s%i" % (affix, AFFIX_INDEX_DELIMITER,
-                               self.prefixal_name_collisions[affix])
-        else:
-            self.suffixal_name_collisions[affix] += 1
-            return "%s%s%i" % (affix, AFFIX_INDEX_DELIMITER,
-                               self.suffixal_name_collisions[affix])
-
-    def add_signature(self, stems, affixes, affix_side="suffix"):
-        """Adds a signature to the morphology.
-
-        Signatures are stored in a dict, where the key is the signature's
-        affix string and the value is a Signature object.
-
-        Args:
-            stems (mapping or iterable): stems associated with this signature
-                (with counts if arg is a dict).
-            affixes (mapping or iterable): affixes associated with this
-                signature (with counts if arg is a dict).
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns: nothing.
-
-        """
-
-        # Add indexes to affixes...
-        if type(affixes) == dict or type(affixes) == collections.Counter:
-            indexed_affixes = dict()
-            for affix, count in affixes.items():
-                indexed_affixes[self.add_new_index(affix)] = count
-        else:
-            indexed_affixes = [self.add_new_index(affix) for affix in affixes]
-
-        # Store signature...
-        signature = Signature(stems, indexed_affixes, affix_side)
-        if affix_side == "prefix":
-            self.prefixal_signatures[signature.affix_string] = signature
-        else:
-            self.suffixal_signatures[signature.affix_string] = signature
+            return {word}
 
     def remove_signature(self, affix_string, affix_side="suffix"):
         """Removes a signature from the morphology.
@@ -924,15 +864,17 @@ class Morphology(object):
 
         """
 
+        word_biographies = self.get_word_biographies(affix_side)
+        analyses = self.get_analyses_list(affix_side)
         lines = list()
-        for word, biography in sorted(
-                self.get_word_biographies(affix_side).items()):
+        for word in sorted(self.word_counts):
             lines.append(word + ":")
-            for func in self.get_analyses_list(affix_side):
+            for func in analyses:
                 lines.append("\t" + func + ":")
                 try:
-                    for analysis in sorted(biography[func]):
-                        lines.append("\t\t%s" % " ".join(analysis))
+                    biography = word_biographies[word][func]
+                    for parse in sorted(biography):
+                        lines.append("\t\t%s" % " ".join(str(m) for m in parse))
                 except KeyError:
                     lines.append("\t\tunanalyzed")
         return "\n".join(lines)
@@ -958,33 +900,94 @@ class Morphology(object):
                                                      for c in continuations)))
         return "\n".join(lines)
 
-    def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
-        """Return frequency counts for selected affixes and stems.
+    def add_new_index(self, affix, affix_side="suffix"):
+        """Returns a name with a new, unique index for a given non-NULL affix.
 
         Args:
-            stems (set):
-                set of stems
-            affixes (set):
-                set of affixes
+            affix (string): the affix for which a new index is required.
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
         Returns:
-            pair of collection.Counter object (stem and affix count).
+            string.
 
-        Todo: This will no longer work as is after split_affixes!
+        TODO: (urgent) don't add index if there is one already!!!
+        
+        """
+
+        if affix == NULL_AFFIX:
+            return affix
+
+        if affix_side == "prefix":
+            self.prefixal_name_collisions[affix] += 1
+            return "%s%s%i" % (affix, AFFIX_INDEX_DELIMITER,
+                               self.prefixal_name_collisions[affix])
+        else:
+            self.suffixal_name_collisions[affix] += 1
+            return "%s%s%i" % (affix, AFFIX_INDEX_DELIMITER,
+                               self.suffixal_name_collisions[affix])
+
+    def add_signature(self, stems, affixes, affix_side="suffix"):
+        """Adds a signature to the morphology.
+
+        Signatures are stored in a dict, where the key is the signature's
+        affix string and the value is a Signature object.
+
+        Args:
+            stems (mapping or iterable): stems associated with this signature
+                (with counts if arg is a dict).
+            affixes (mapping or iterable): affixes associated with this
+                signature (with counts if arg is a dict).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
 
         """
 
-        stem_counts = collections.Counter()
-        affix_counts = collections.Counter()
-        for stem in stems:
-            for affix in affixes:
-                word = stem+affix if affix_side == "suffix" else affix+stem
-                word_count = self.word_counts[word]
-                stem_counts[stem] += word_count
-                affix_counts[affix] += word_count
-        return stem_counts, affix_counts
+        # Add indexes to affixes...
+        # if type(affixes) == dict or type(affixes) == collections.Counter:
+            # indexed_affixes = dict()
+            # for affix, count in affixes.items():
+                # indexed_affixes[self.add_new_index(affix, affix_side)] = count
+        # else:
+            # indexed_affixes = [self.add_new_index(affix, affix_side)
+                               # for affix in affixes]
+
+        # Store signature...
+        signature = Signature(stems, affixes, affix_side)
+        if affix_side == "prefix":
+            self.prefixal_signatures[signature.affix_string] = signature
+        else:
+            self.suffixal_signatures[signature.affix_string] = signature
+
+    # def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
+        # """Return frequency counts for selected affixes and stems.
+
+        # Args:
+            # stems (set):
+                # set of stems
+            # affixes (set):
+                # set of affixes
+            # affix_side (string, optional): either "suffix" (default) or
+                # "prefix".
+
+        # Returns:
+            # pair of collection.Counter object (stem and affix count).
+
+        # Todo: This will no longer work as is after split_affixes!
+
+        # """
+
+        # stem_counts = collections.Counter()
+        # affix_counts = collections.Counter()
+        # for stem in stems:
+            # for affix in affixes:
+                # word = stem+affix if affix_side == "suffix" else affix+stem
+                # word_count = self.word_counts[word]
+                # stem_counts[stem] += word_count
+                # affix_counts[affix] += word_count
+        # return stem_counts, affix_counts
 
     def build_signatures(self, bigrams, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
@@ -1010,33 +1013,86 @@ class Morphology(object):
             self.suffixal_signatures = dict()
 
         # List all possible affixes of each stem...
-        affixes = collections.defaultdict(list) # TODO: set instead of list?
+        affixes = collections.defaultdict(set) # TODO: revert to dict of lists?
         if affix_side == "suffix":
-            for stem, suffix in bigrams:
-                affixes[stem].append(suffix)
+            for stem, affix in sorted(bigrams):
+                affixes[stem].add(affix)
         else:
-            for prefix, stem in bigrams:
-                affixes[stem].append(prefix)
+            for affix, stem in sorted(bigrams):
+                affixes[stem].add(affix)
 
-        # Find all stems associated with each affix list...
+        # Find all stems associated with each affix set...
         stem_sets = collections.defaultdict(set)
         for stem, affixes in affixes.items():
-            stem_sets[tuple(sorted(affixes))].add(stem)
+            stem_sets[tuple(affixes)].add(stem)
 
-        # Build signatures based on sets of stems associated with affixes...
-        signatures = set()
+        # Add indexes to affixes...
+        stem_sets_with_indexes = dict()
+        successors = dict()
         for affixes, stems in stem_sets.items():
+            indexed_affixes = [self.add_new_index(affix, affix_side)
+                               for affix in affixes]
+            stem_sets_with_indexes[tuple(indexed_affixes)] = stems
+
+        # List all morpheme successors...
+        successors = dict()
+        for affixes, stems in stem_sets_with_indexes.items():
+            if affix_side == "suffix":
+                bigrams_with_indexes = itertools.product(stems, affixes)
+            else:
+                bigrams_with_indexes = itertools.product(affixes, stems)
+            for morpheme1, morpheme2 in bigrams_with_indexes:
+                try:
+                    successors[morpheme1].add(morpheme2)
+                except KeyError:
+                    successors[morpheme1] = {morpheme2}
+
+        # Helper function for traversing the graph of successors...
+        def traverse(morpheme, successors, parse, parses):
+            parse.append(morpheme)
+            try:
+                for successor in successors[morpheme]:
+                    traverse(successor, successors, parse, parses)
+            except KeyError:
+                parses.add(tuple(parse))
+                parse.pop()
+
+        # Build set of parses...
+        parses = set()
+        for morpheme in successors:
+            traverse(morpheme, successors, list(), parses)
+
+        # Get stem and affix counts, and update word biographies...
+        morpheme_counts = collections.Counter()
+        word_biographies = self.get_word_biographies(affix_side)
+        caller = inspect.stack()[1][3]
+        for parse in parses:
+            stripped_morphemes = [pycrab.utils.strip_index(morpheme)
+                                  for morpheme in parse]
+            word = "".join(stripped_morphemes)
+            for morpheme in stripped_morphemes:
+                morpheme_counts[morpheme] += self.word_counts[word]
+            try:
+                word_biographies[word][caller].add(parse)
+            except KeyError:
+                word_biographies[word][caller] = {parse}
+        
+        # Build signatures based on sets of stems associated with affixes...
+        for affixes, stems in stem_sets_with_indexes.items():
             if len(stems) >= min_num_stems:     # Require min number of stems.
                 if self.word_counts:
-                    stem_counts, affix_counts = self.get_stem_and_affix_count(
-                            stems, affixes, affix_side=affix_side)
+                    stem_counts = {stem: morpheme_counts[stem] for stem in stems}
+                    affix_counts = {afx: morpheme_counts[afx] for afx in affixes}
                     self.add_signature(stem_counts, affix_counts, affix_side)
                 else:   # If no word counts are available yet...
                     self.add_signature(stems, affixes, affix_side)
 
-        return len(signatures)
+        # Add the caller function to the list of analyses previously run.
+        self.get_analyses_list(affix_side).append(caller)
 
-    @biograph
+        return len(stem_sets_with_indexes)
+
+    # @biograph
     def find_signatures1(self, min_stem_len=MIN_STEM_LEN,
                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Find initial signatures (using Goldsmith's Lxa-Crab algorithm).
@@ -1175,7 +1231,7 @@ class Morphology(object):
         else:
             self.suffixal_families = families
 
-    @biograph
+    # @biograph
     def widen_signatures(self, affix_side="suffix"):
         """Expand existing signatures with protostems that can be continued
         by all their affixes. In case of ambiguity, protostems are added to
@@ -1572,27 +1628,27 @@ class Morphology(object):
                                min_num_stems, num_seed_families,
                                min_robustness, affix_side=affix_side)
 
-    @biograph
-    def _add_test_signatures(self):
-        """"Add signatures to morphology for testing purposes."""
-        self.add_signature(
-            stems=["want", "add", "add"],
-            affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
-        )
-        self.add_signature(
-            stems=["cr", "dr"],
-            affixes=["y", "ied"],
-        )
-        self.add_signature(
-            stems=["do", "wind"],
-            affixes=["un", "re"],
-            affix_side="prefix",
-        )
-        self.add_signature(
-            stems=["make", "create"],
-            affixes=["re", pycrab.NULL_AFFIX],
-            affix_side="prefix",
-        )
+    # @biograph
+    # def _add_test_signatures(self):
+        # """"Add signatures to morphology for testing purposes."""
+        # self.add_signature(
+            # stems=["want", "add", "add"],
+            # affixes=[pycrab.NULL_AFFIX, "ed", "ing"],
+        # )
+        # self.add_signature(
+            # stems=["cr", "dr"],
+            # affixes=["y", "ied"],
+        # )
+        # self.add_signature(
+            # stems=["do", "wind"],
+            # affixes=["un", "re"],
+            # affix_side="prefix",
+        # )
+        # self.add_signature(
+            # stems=["make", "create"],
+            # affixes=["re", pycrab.NULL_AFFIX],
+            # affix_side="prefix",
+        # )
 
 
 class Signature(tuple):

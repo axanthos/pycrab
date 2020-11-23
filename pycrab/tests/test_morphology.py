@@ -306,28 +306,28 @@ class TestMorphology(TestCase):
             affix_side="prefix")
         os.remove(name)
 
-    def test_get_stem_and_affix_count_prefix(self):
-        my_morphology = morphology.Morphology()
-        my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
-                                     "wanting": 1, "undo": 4, "redo": 3}
-        stems = {"do"}
-        affixes = {"un", "re"}
-        expected_stem_counts = {"do": 7}
-        expected_affix_counts = {"un": 4, "re": 3}
-        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes,
-                         "prefix"), (expected_stem_counts,
-                         expected_affix_counts))
+    # def test_get_stem_and_affix_count_prefix(self):
+        # my_morphology = morphology.Morphology()
+        # my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
+                                     # "wanting": 1, "undo": 4, "redo": 3}
+        # stems = {"do"}
+        # affixes = {"un", "re"}
+        # expected_stem_counts = {"do": 7}
+        # expected_affix_counts = {"un": 4, "re": 3}
+        # self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes,
+                         # "prefix"), (expected_stem_counts,
+                         # expected_affix_counts))
 
-    def test_get_stem_and_affix_count_suffix(self):
-        my_morphology = morphology.Morphology()
-        my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
-                                     "wanting": 1, "undo": 4, "redo": 3}
-        stems = {"add", "want"}
-        affixes = {"ed", "ing"}
-        expected_stem_counts = {"add": 6, "want": 3}
-        expected_affix_counts = {"ed": 6, "ing": 3}
-        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
-                         (expected_stem_counts, expected_affix_counts))
+    # def test_get_stem_and_affix_count_suffix(self):
+        # my_morphology = morphology.Morphology()
+        # my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
+                                     # "wanting": 1, "undo": 4, "redo": 3}
+        # stems = {"add", "want"}
+        # affixes = {"ed", "ing"}
+        # expected_stem_counts = {"add": 6, "want": 3}
+        # expected_affix_counts = {"ed": 6, "ing": 3}
+        # self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
+                         # (expected_stem_counts, expected_affix_counts))
 
     def test_add_new_index_initial(self):
         my_morphology = morphology.Morphology()
@@ -340,7 +340,7 @@ class TestMorphology(TestCase):
     
     def test_get_current_parses_unanalyzed_word(self):
         self.assertEqual(self.morphology.get_current_parses("unanalyzed"), 
-                         ("unanalyzed"))
+                         ({"unanalyzed"}))
     
     def test_suffixal_bigrams(self):
         expected_bigrams = {
@@ -408,11 +408,11 @@ class TestMorphology(TestCase):
             ("dis", "able"),    # 'able' should be retained (min_num_stems=1)
         }
         expected_morphology = morphology.Morphology()
-        expected_morphology.add_signature(stems=["do", "wind"],
-                                          affixes=["un", "re"],
-                                          affix_side="prefix")
         expected_morphology.add_signature(stems=["make", "create"],
                                           affixes=["re", morphology.NULL_AFFIX],
+                                          affix_side="prefix")
+        expected_morphology.add_signature(stems=["do", "wind"],
+                                          affixes=["un", "re"],
                                           affix_side="prefix")
         expected_morphology.add_signature(stems=["able"], affixes=["dis"],
                                           affix_side="prefix")
@@ -434,6 +434,4 @@ class TestMorphology(TestCase):
         expected_morphology = morphology.Morphology()
         expected_morphology.add_signature(stems={"cr": 2, "dr": 3},
                                           affixes={"y": 3, "ied": 2})
-        # print(existing_morphology.suffixal_signatures)
-        # print(expected_morphology.suffixal_signatures)
         self.assertTrue(existing_morphology == expected_morphology)
