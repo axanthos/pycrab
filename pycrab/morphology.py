@@ -828,11 +828,11 @@ class Morphology(object):
         if affix_side == "prefix":
             for prefix, stem in bigrams:
                 continuations[stem].add(prefix)
-                analyzed_words.add(prefix + stem)
+                analyzed_words.add(pycrab.utils.strip_index(prefix) + stem)
         else:
             for stem, suffix in bigrams:
                 continuations[stem].add(suffix)
-                analyzed_words.add(stem + suffix)
+                analyzed_words.add(stem + pycrab.utils.strip_index(suffix))
 
         # Format each stem or word...
         for entry in sorted(entries):
@@ -876,7 +876,7 @@ class Morphology(object):
                     for parse in sorted(biography):
                         lines.append("\t\t%s" % " ".join(str(m) for m in parse))
                 except KeyError:
-                    lines.append("\t\tunanalyzed")
+                    lines.append("\t\t%s" % word)
         return "\n".join(lines)
 
     def serialize_protostems(self, affix_side="suffix"):
@@ -911,11 +911,10 @@ class Morphology(object):
         Returns:
             string.
 
-        TODO: (urgent) don't add index if there is one already!!!
-        
         """
 
-        if affix == NULL_AFFIX:
+        # Skip NULL affix and affixes that already have an index...
+        if affix == NULL_AFFIX or AFFIX_INDEX_DELIMITER in affix:
             return affix
 
         if affix_side == "prefix":
@@ -1076,7 +1075,7 @@ class Morphology(object):
                 word_biographies[word][caller].add(parse)
             except KeyError:
                 word_biographies[word][caller] = {parse}
-        
+
         # Build signatures based on sets of stems associated with affixes...
         for affixes, stems in stem_sets_with_indexes.items():
             if len(stems) >= min_num_stems:     # Require min number of stems.
@@ -1254,12 +1253,15 @@ class Morphology(object):
         # Initialize list of protostems previously added to a signature.
         previously_added = set()
 
-        # For each signature sorted by number of affixes then robustness...
+        # Sort signatures by number of affixes then robustness...
         signatures = self.get_signatures(affix_side)
         signatures.sort(key=lambda s: s.robustness, reverse=True)
         signatures.sort(key=lambda s: len(s.affixes), reverse=True)
+
+        # For each signature...
         for signature in signatures:
-            affixes = set(signature.affixes)
+            affixes = list(signature.affixes.keys())
+            stripped_affixes = [pycrab.utils.strip_index(a) for a in affixes]
 
             # For all unanalyzed protostems...
             for protostem, continuations in protostems.items():
@@ -1269,13 +1271,13 @@ class Morphology(object):
                     continue
 
                 # If this protostem can have all affixes in this signature...
-                if affixes.issubset(continuations):
+                if set(stripped_affixes).issubset(continuations):
 
                     # Create new bigrams and remove them from unanalyzed stuff...
-                    for affix in affixes:
+                    for idx, affix in enumerate(affixes):
                         bigrams.add((affix, protostem) if affix_side == "prefix"
                                    else (protostem, affix))
-                        protostems[protostem].remove(affix)
+                        protostems[protostem].remove(stripped_affixes[idx])
 
                     # Flag protostem as previously added to a signature...
                     previously_added.add(protostem)
@@ -1530,7 +1532,7 @@ class Morphology(object):
                               affix_side="prefix")
 
         # Widen signatures.
-        #self.widen_signatures(affix_side)
+        self.widen_signatures(affix_side)
 
         # Split affixes.
         # self.split_affixes(affix_side)
@@ -1712,9 +1714,22 @@ class Signature(tuple):
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
+        Todo: test morpheme stripping.
+
         """
+
+        # Get stripped versions of stems and affixes...
+        stripped_stems = [pycrab.utils.strip_index(s) for s in stems]
+        if issubclass(type(stems), dict):
+            stripped_stems = dict(zip(stripped_stems, list(stems.values())))
+        stripped_affixes = [pycrab.utils.strip_index(a) for a in affixes]
+        if issubclass(type(affixes), dict):
+            stripped_affixes = dict(zip(stripped_affixes,
+                                        list(affixes.values())))
+
         return tuple.__new__(cls, (ImmutableDict(stems),
-                                   ImmutableDict(affixes), affix_side))
+                                   ImmutableDict(stripped_stems),                                    ImmutableDict(affixes),
+                                   ImmutableDict(stripped_affixes), affix_side))
 
     @property
     def stems(self):
@@ -1722,14 +1737,24 @@ class Signature(tuple):
         return tuple.__getitem__(self, 0)
 
     @property
+    def stripped_stems(self):
+        """Read-only accessor for the stripped_stems attribute."""
+        return tuple.__getitem__(self, 1)
+
+    @property
     def affixes(self):
         """Read-only accessor for the affixes attribute."""
-        return tuple.__getitem__(self, 1)
+        return tuple.__getitem__(self, 2)
+
+    @property
+    def stripped_affixes(self):
+        """Read-only accessor for the stripped_affixes attribute."""
+        return tuple.__getitem__(self, 3)
 
     @property
     def affix_side(self):
         """Read-only accessor for the affix_side attribute."""
-        return tuple.__getitem__(self, 2)
+        return tuple.__getitem__(self, 4)
 
     def __hash__(self):
         """Hashing function for signature objects."""
@@ -1770,7 +1795,8 @@ class Signature(tuple):
         lines.append("-" * 24)
 
         # Number of letters in words or as analyzed...
-        letters_in_words = sum(len(m1)+len(m2) for m1, m2 in self.bigrams)
+        letters_in_words = sum(len(m1) + len(m2)
+                               for m1, m2 in self.stripped_bigrams)
         lines.append("\n    Letters in words if unanalyzed: %10i"
                      % letters_in_words)
         lines.append("               Letters as analyzed: %10i"
@@ -1793,6 +1819,8 @@ class Signature(tuple):
 
         Returns:
             bool.
+
+        Todo: use stripped affixes?
 
         """
         return set(str(affix) for affix in self.affixes)    \
@@ -1877,8 +1905,10 @@ class Signature(tuple):
             int.
 
         """
-        saved_stem_length = len("".join(self.stems)) * (len(self.affixes)-1)
-        saved_affix_length = len("".join(self.affixes)) * (len(self.stems)-1)
+        saved_stem_length = len("".join(self.stripped_stems))       \
+                          * (len(self.stripped_affixes)-1)
+        saved_affix_length = len("".join(self.stripped_affixes))    \
+                           * (len(self.stripped_stems)-1)
         return saved_stem_length + saved_affix_length
 
     @cached_property
@@ -1896,8 +1926,11 @@ class Signature(tuple):
         """
         return self._compute_bigrams()
 
-    def _compute_bigrams(self):
-        """Construct a set of morpheme bigrams using stems and affixes.
+    @cached_property
+    def stripped_bigrams(self):
+        """Construct a set of morpheme bigrams using stripped stems and affixes.
+
+        bigrams are pairs (prefix, stem) or (stem, suffix).
 
         Args:
             none.
@@ -1906,10 +1939,25 @@ class Signature(tuple):
             set of tuples.
 
         """
+        return self._compute_bigrams(stripped=True)
 
+    def _compute_bigrams(self, stripped=False):
+        """Construct a set of morpheme bigrams using stems and affixes.
+
+        Args:
+            stripped (bool): indicates whether stripped morphemes should be used
+                             in place of regular morphemes (default False).
+
+        Returns:
+            set of tuples.
+
+        """
+
+        stems = self.stripped_stems if stripped else self.stems
+        affixes = self.stripped_affixes if stripped else self.affixes
         if self.affix_side == "suffix":
-            return set(itertools.product(self.stems, self.affixes))
-        return set(itertools.product(self.affixes, self.stems))
+            return set(itertools.product(stems, affixes))
+        return set(itertools.product(affixes, stems))
 
     def get_edge_entropy(self, num_letters=1):
         """Compute entropy (in bits) over final stem letter sequences.
@@ -1924,12 +1972,13 @@ class Signature(tuple):
             ValueError: If signature contains stems shorter than num_letters.
 
         """
-        for stem in self.stems:
+        for stem in self.stripped_stems:
             if len(stem) < num_letters:
                 raise ValueError("Signature contains stems shorter than "
                                  "required number of letters for entropy "
                                  "calculation")
-        counts = collections.Counter(stem[-num_letters:] for stem in self.stems)
+        counts = collections.Counter(stem[-num_letters:]
+                                     for stem in self.stripped_stems)
         return pycrab.utils.entropy(counts)
 
     @cached_property
@@ -1967,17 +2016,18 @@ class Signature(tuple):
 
         """
         cast_signatures = set()
-        for pos in range(max(len(affix) for affix in self.affixes)):
-            affix_beginnings = set(affix[0:pos] for affix in self.affixes
+        for pos in range(max(len(affix) for affix in self.stripped_affixes)):
+            affix_beginnings = set(affix[0:pos]
+                                   for affix in self.stripped_affixes
                                    if len(affix) > pos)
             for affix_beginning in affix_beginnings:
                 letter_types_at_pos = set()
-                considered_affixes = [affix for affix in self.affixes
+                considered_affixes = [affix for affix in self.stripped_affixes
                                       if affix.startswith(affix_beginning)
                                       and len(affix) > pos]
                 letter_types_at_pos = set(affix[pos]
                                           for affix in considered_affixes)
-                if affix_beginning in self.affixes:
+                if affix_beginning in self.stripped_affixes:
                     considered_affixes.append(NULL_AFFIX)
                     letter_types_at_pos.add(str(NULL_AFFIX))
                 if len(letter_types_at_pos) == len(considered_affixes) > 1:
