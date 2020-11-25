@@ -1073,7 +1073,7 @@ class Morphology(object):
                                   for morpheme in parse]
             word = "".join(stripped_morphemes)
             for morpheme in stripped_morphemes:
-                morpheme_counts[morpheme] += self.word_counts[word]
+                morpheme_counts[morpheme] += self.word_counts[word] # TODO: try except if no word counts
             try:
                 word_biographies[word][caller].add(parse)
             except KeyError:
@@ -1262,7 +1262,7 @@ class Morphology(object):
         # For each signature...
         for signature in signatures:
             affixes = list(signature.affixes.keys())
-            stripped_affixes = [pycrab.utils.strip_index(a) for a in affixes]
+            stripped_affixes = [pycrab.utils.strip_index(a) for a in affixes]   # TODO call function 
 
             # For all unanalyzed protostems...
             for protostem, continuations in protostems.items():
@@ -1424,7 +1424,6 @@ class Morphology(object):
                     old_bigram = switch_if_needed((stem+diff, affix), affix_side)
                     bigrams.discard(old_bigram)
                     print("4: dicarded bigram", *old_bigram)
-            # input()
                     
                 # stripped_affix = pycrab.utils.strip_index(affix)
                 # if stripped_affix == diff:
