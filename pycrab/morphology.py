@@ -407,8 +407,7 @@ class Morphology(object):
     def suffixal_stems(self):
         """Construct a set of stems based on all suffixal signatures.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of strings.
@@ -421,8 +420,7 @@ class Morphology(object):
     def prefixal_stems(self):
         """Construct a set of stems based on all prefixal signatures.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of strings.
@@ -452,8 +450,7 @@ class Morphology(object):
     def suffixes(self):
         """Construct a set of suffixes based on all suffixal signatures.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of strings.
@@ -466,8 +463,7 @@ class Morphology(object):
     def prefixes(self):
         """Construct a set of prefixes based on all prefixal signatures.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of strings.
@@ -499,8 +495,7 @@ class Morphology(object):
 
         bigrams are pairs (stem, suffix).
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of tuples.
@@ -515,8 +510,7 @@ class Morphology(object):
 
         bigrams are pairs (prefix, stem).
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of tuples.
@@ -525,7 +519,7 @@ class Morphology(object):
 
         return self.get_bigrams(affix_side="prefix")
 
-    def get_bigrams(self, affix_side="suffix"):
+    def get_bigrams(self, affix_side="suffix", stripped=False):
         """Construct a set of morpheme bigrams based on all signatures of a
         given type.
 
@@ -535,15 +529,21 @@ class Morphology(object):
         Args:
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
-
+            stripped (bool): indicates whether stripped morphemes should be used
+                in place of regular morphemes (default False).
+                
         Returns:
             set of tuples.
 
         """
 
         bigrams = set()
-        for signature in self.get_signatures(affix_side):
-            bigrams.update(signature.bigrams)
+        if stripped:
+            for signature in self.get_signatures(affix_side):
+                bigrams.update(signature.stripped_bigrams)
+        else:
+            for signature in self.get_signatures(affix_side):
+                bigrams.update(signature.stripped_bigrams)
         return bigrams
 
     def get_analyses_list(self, affix_side="suffix"):
@@ -654,7 +654,7 @@ class Morphology(object):
         # Total number of letters in stems.
         lines.append("%-45s %10i" % (
             "Total number of letters in stems",
-            sum(len(stem) for stem in stems),
+            sum(len(pycrab.utils.strip_index(stem)) for stem in stems),
         ))
 
         # Total number of affix letters.
@@ -666,15 +666,16 @@ class Morphology(object):
         # Total number of letters in signatures.
         num_letters = 0
         for signature in signatures:
-            num_letters += sum(len(stem) for stem in signature.stems)
-            num_letters += sum(len(affix) for affix in signature.affixes)
+            num_letters += sum(len(stem) for stem in signature.stripped_stems)
+            num_letters += sum(len(affix) 
+                               for affix in signature.stripped_affixes)
         lines.append("%-45s %10i" % (
             "Total number of letters in signatures",
             num_letters,
         ))
 
         # Number of analyzed words...
-        bigrams = self.get_bigrams(affix_side)
+        bigrams = self.get_bigrams(affix_side, stripped=True)
         lines.append("%-45s %10i" % ("Number of analyzed words:", len(bigrams)))
 
         # Total number of letters in analyzed words.
@@ -828,21 +829,23 @@ class Morphology(object):
         if affix_side == "prefix":
             for prefix, stem in bigrams:
                 continuations[stem].add(prefix)
-                analyzed_words.add(pycrab.utils.strip_index(prefix) + stem)
+                analyzed_words.add(pycrab.utils.strip_index(prefix) 
+                                   + pycrab.utils.strip_index(stem))
         else:
             for stem, suffix in bigrams:
                 continuations[stem].add(suffix)
-                analyzed_words.add(stem + pycrab.utils.strip_index(suffix))
+                analyzed_words.add(pycrab.utils.strip_index(stem) 
+                                   + pycrab.utils.strip_index(suffix))
 
         # Format each stem or word...
         for entry in sorted(entries):
             if entry in stems:
                 if affix_side == "prefix":
-                    lines.append(entry + "\t" + "\t".join(
+                    lines.append(entry + ":\t" + "\t".join(
                                  c + entry for c in sorted(continuations[entry])
                                  ))
                 else:
-                    lines.append(entry + "\t" + "\t".join(
+                    lines.append(entry + ":\t" + "\t".join(
                                  entry + c for c in sorted(continuations[entry])
                                  ))
             elif entry not in analyzed_words:
@@ -1718,7 +1721,7 @@ class Signature(tuple):
 
         """
 
-        # Get stripped versions of stems and affixes...
+        # Compute stripped versions of stems and affixes...
         stripped_stems = [pycrab.utils.strip_index(s) for s in stems]
         if issubclass(type(stems), dict):
             stripped_stems = dict(zip(stripped_stems, list(stems.values())))
@@ -1830,8 +1833,7 @@ class Signature(tuple):
     def affix_string(self):
         """Returns a string with the signature's sorted affixes.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             string.
@@ -1842,8 +1844,7 @@ class Signature(tuple):
     def _compute_affix_string(self):
         """Construct a string with the signature's sorted affixes.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             string.
@@ -1856,8 +1857,7 @@ class Signature(tuple):
     def example_stem(self):
         """Returns the signature's most frequent stem.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             string.
@@ -1868,8 +1868,7 @@ class Signature(tuple):
     def _compute_example_stem(self):
         """Returns the signature's most frequent stem.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             string.
@@ -1886,8 +1885,7 @@ class Signature(tuple):
         the sum of the lengths of all words covered by the signature, minus the
         sum of the lengths of stems, minus the sum of the lengths of affixes.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             int.
@@ -1898,8 +1896,7 @@ class Signature(tuple):
     def _compute_robustness(self):
         """Computes the robustness of the signature.
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             int.
@@ -1917,8 +1914,7 @@ class Signature(tuple):
 
         bigrams are pairs (prefix, stem) or (stem, suffix).
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of tuples.
@@ -1932,8 +1928,7 @@ class Signature(tuple):
 
         bigrams are pairs (prefix, stem) or (stem, suffix).
 
-        Args:
-            none.
+        Args: none.
 
         Returns:
             set of tuples.
@@ -1946,11 +1941,13 @@ class Signature(tuple):
 
         Args:
             stripped (bool): indicates whether stripped morphemes should be used
-                             in place of regular morphemes (default False).
+                in place of regular morphemes (default False).
 
         Returns:
             set of tuples.
 
+        Todo:
+            test stripped
         """
 
         stems = self.stripped_stems if stripped else self.stems

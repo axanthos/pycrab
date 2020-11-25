@@ -63,7 +63,10 @@ def format_if_shadow(affix_string, shadow_signatures):
 
     """
 
-    if affix_string in shadow_signatures:
+    stripped_affix_string = morphology.AFFIX_DELIMITER.join(
+            strip_index(affix) 
+            for affix in sorted(affix_string.split(morphology.AFFIX_DELIMITER)))
+    if stripped_affix_string in shadow_signatures:
         return "[%s]" % affix_string
     else:
         return affix_string
