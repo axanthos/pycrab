@@ -15,6 +15,8 @@ import collections
 import functools
 import math
 
+from pycrab import morphology
+
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -67,6 +69,29 @@ def format_if_shadow(affix_string, shadow_signatures):
         return affix_string
 
 
+def strip_index(affix):
+    """Returns a name without index for an affix.
+
+    Args:
+        affix (string): the affix from which the index should be removed.
+
+    Returns:
+        string.
+
+    Todo: test.
+
+    """
+
+    if affix == morphology.NULL_AFFIX:
+        return affix
+
+    location = affix.find(morphology.AFFIX_MARKER)
+    if location == -1:
+        return affix
+    else:
+        return affix[:location]
+
+
 def biograph(func):
     """Decorator for updating word biographies after learning functions.
 
@@ -84,18 +109,18 @@ def biograph(func):
     @functools.wraps(func)
     def wrapper_biograph(self, *args, **kwargs):
         func(self, *args, **kwargs)
-        word_to_parses = collections.defaultdict(set)
+        word_to_bigrams = collections.defaultdict(set)
         if "affix_side" in kwargs:
             affix_side = kwargs["affix_side"]
         elif "prefix" in args:
             affix_side = "prefix"
         else:
             affix_side = "suffix"
-        for parse in self.get_parses(affix_side):
-            word_to_parses["".join(parse)].add(parse)
+        for bigram in self.get_bigrams(affix_side):
+            word_to_bigrams["".join(bigram)].add(bigram)
         word_biographies = self.get_word_biographies(affix_side)
-        for word, parses in word_to_parses.items():
-            word_biographies[word][func.__name__] = parses
+        for word, bigrams in word_to_bigrams.items():
+            word_biographies[word][func.__name__] = bigrams
         # for word in self.word_counts.keys():
             # if word not in word_biographies:
                 # word_biographies[word][func.__name__] = {None}

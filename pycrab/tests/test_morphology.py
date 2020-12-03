@@ -264,8 +264,7 @@ class TestMorphology(TestCase):
         wordlist_lower = [word.lower() for word in wordlist]
         my_morphology.learn_from_wordlist(wordlist, True, 1, 1,
                                           affix_side="prefix")
-        mock_find_signatures1.assert_called_with(Counter(wordlist_lower), 1, 1,
-                                                 affix_side="prefix")
+        mock_find_signatures1.assert_called_with(1, 1, affix_side="prefix")
 
     @patch('pycrab.Morphology.find_signatures1')
     def test_learn_from_wordlist_not_lower(self, mock_find_signatures1):
@@ -273,8 +272,7 @@ class TestMorphology(TestCase):
         wordlist = ["Test", "data", "test"]
         my_morphology.learn_from_wordlist(wordlist, False, 1, 1,
                                           affix_side="prefix")
-        mock_find_signatures1.assert_called_with(Counter(wordlist), 1, 1,
-                                                 affix_side="prefix")
+        mock_find_signatures1.assert_called_with(1, 1, affix_side="prefix")
 
     @patch('pycrab.Morphology.learn_from_wordlist')
     def test_learn_from_string(self, mock_learn_from_wordlist):
@@ -326,8 +324,21 @@ class TestMorphology(TestCase):
         self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
                          (expected_stem_counts, expected_affix_counts))
 
-    def test_suffixal_parses(self):
-        expected_parses = {
+    def test_add_new_index_initial(self):
+        my_morphology = morphology.Morphology()
+        expected_affix = "af:1".replace(":", morphology.AFFIX_MARKER)
+        self.assertEqual(my_morphology.add_new_index("af"), expected_affix)
+        
+    # def test_get_current_parses_analyzed_word(self):
+        # self.assertEqual(self.morphology.get_current_parses("added"), 
+                         # ("add", "ed"))
+    
+    # def test_get_current_parses_unanalyzed_word(self):
+        # self.assertEqual(self.morphology.get_current_parses("unanalyzed"), 
+                         # ({"unanalyzed"}))
+    
+    def test_suffixal_bigrams(self):
+        expected_bigrams = {
             ("want", morphology.NULL_AFFIX),
             ("want", "ed"),
             ("want", "ing"),
@@ -339,10 +350,10 @@ class TestMorphology(TestCase):
             ("cr", "y"),
             ("cr", "ied"),
         }
-        self.assertEqual(self.morphology.suffixal_parses, expected_parses)
+        self.assertEqual(self.morphology.suffixal_bigrams, expected_bigrams)
 
-    def test_prefixal_parses(self):
-        expected_parses = {
+    def test_prefixal_bigrams(self):
+        expected_bigrams = {
             ("un", "do"),
             ("re", "do"),
             ("un", "wind"),
@@ -352,7 +363,7 @@ class TestMorphology(TestCase):
             (morphology.NULL_AFFIX, "create"),
             ("re", "create"),
         }
-        self.assertEqual(self.morphology.prefixal_parses, expected_parses)
+        self.assertEqual(self.morphology.prefixal_bigrams, expected_bigrams)
 
     def test_build_suffixal_signatures(self):
         existing_morphology = morphology.Morphology()
