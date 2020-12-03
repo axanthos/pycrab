@@ -1183,7 +1183,7 @@ class Morphology(object):
 
                     # Create new bigrams and remove them from unanalyzed stuff...
                     for affix in affixes:
-                        parses.add((affix, protostem) if affix_side == "prefix"
+                        bigrams.add((affix, protostem) if affix_side == "prefix"
                                    else (protostem, affix))
                         protostems[protostem].remove(affix)
 
@@ -1215,16 +1215,16 @@ class Morphology(object):
         reanalyzed as sequences of 2 affixes, namely the string difference
         itself and a residue which is often an affix in the long stem signature.
         In our example, "ing" and "ings" in NULL=ed=ing=ings=s are reanalyzed as
-        "ing" + NULL and "ing" + "s". In addition, if the string difference 
-        corresponds to an existing affix, we do not make the assumption that 
-        they are one an the same at this point; rather, we disambiguate the 
-        newly discovered affix by adding an integer to it, e.g. "ing2". Thus, 
-        the short stem signature NULL=ed=ing=ings=s is in effect replaced by a 
+        "ing" + NULL and "ing" + "s". In addition, if the string difference
+        corresponds to an existing affix, we do not make the assumption that
+        they are one an the same at this point; rather, we disambiguate the
+        newly discovered affix by adding an integer to it, e.g. "ing2". Thus,
+        the short stem signature NULL=ed=ing=ings=s is in effect replaced by a
         new short stem signature NULL=ed=ing2=s, while "ing2" becomes a stem in
-        a signature whose affixes are the "residues" mentioned above, i.e. the 
-        second components in the sequence of affixes resulting from the 
+        a signature whose affixes are the "residues" mentioned above, i.e. the
+        second components in the sequence of affixes resulting from the
         reanalysis of affixes of the short stem signature, namely NULL and "s".
-      
+
         The discovered rule can be summarized as [NULL=ed=ing=s]_ing ==> NULL_s,
         which means that words that have the affix "ing" found in the signature
         NULL=ed=ing=s can have NULL or "s" as a second affix (e.g. "bowlings"
@@ -1295,9 +1295,9 @@ class Morphology(object):
             indexed_diff = self.add_new_index(diff)
 
             # Build sets of affixes for new short and long stem signatures...
-            short_stem_sig_object = self.get_signature(short_stem_sig_string, 
+            short_stem_sig_object = self.get_signature(short_stem_sig_string,
                                                        affix_side)
-            long_stem_sig_object = self.get_signature(long_stem_sig_string, 
+            long_stem_sig_object = self.get_signature(long_stem_sig_string,
                                                       affix_side)
             # new_short_stem_affixes = {indexed_diff}
             # new_long_stems_affixes = set(long_stem_sig_object.stripped_affixes)
@@ -1315,7 +1315,7 @@ class Morphology(object):
                 print("1: added bigram", stem, indexed_diff)
                 for affix in short_stem_sig_object.affixes:
                     if affix == diff:
-                        old_bigram = switch_if_needed((stem, NULL_AFFIX), 
+                        old_bigram = switch_if_needed((stem, NULL_AFFIX),
                                                        affix_side)
                     elif affix.startswith(diff):
                         old_bigram = switch_if_needed((stem, affix), affix_side)
@@ -1325,13 +1325,13 @@ class Morphology(object):
                     print("2: dicarded bigram", *old_bigram)
             for affix in long_stem_sig_object.affixes:
                 bigrams.add((indexed_diff, pycrab.utils.strip_index(affix)))
-                print("3: added bigram", indexed_diff, 
+                print("3: added bigram", indexed_diff,
                       pycrab.utils.strip_index(affix))
                 for stem in short_stems:
                     old_bigram = switch_if_needed((stem+diff, affix), affix_side)
                     bigrams.discard(old_bigram)
                     print("4: dicarded bigram", *old_bigram)
-                    
+
                 # stripped_affix = pycrab.utils.strip_index(affix)
                 # if stripped_affix == diff:
                     # new_long_stems_affixes.add(NULL_AFFIX)
@@ -1348,10 +1348,10 @@ class Morphology(object):
 
             # # TODO: Store for later output
             # print("[%s]_%s\t==>\t%s\t%s\t%s\t%s" % ((
-                # AFFIX_DELIMITER.join(str(af) 
+                # AFFIX_DELIMITER.join(str(af)
                                      # for af in sorted(new_short_stem_affixes)),
                 # diff,
-                # AFFIX_DELIMITER.join(str(af) 
+                # AFFIX_DELIMITER.join(str(af)
                                      # for af in sorted(new_long_stems_affixes)),
                 # short_stem_sig_string,
                 # long_stem_sig_string,
@@ -1960,6 +1960,32 @@ class Signature(tuple):
                     cast_signatures.add(AFFIX_DELIMITER.join(l for l in
                                         sorted(letter_types_at_pos)))
         return cast_signatures
+
+
+class Word(object):
+    """A class for representing a word in pycrab.
+
+    Todo:
+        Examples
+        Tests
+
+    """
+
+    def __init__(self, count=0):
+        """__init__ method for class Word.
+
+        Besides the optional 'count' attribute it is initialized with, a word
+        also has attributes 'parses' (its current set of Parses, defaulting to
+        {word}), 'biography' (a mapping from learning function name to set of 
+        parses resulting from this function), and 'scratchpad' (a list of 
+        strings with information about this word).
+
+        Args:
+            count (int): word count (defaults to 0).
+
+        """
+        self.count = count
+        self.parses = set()
 
 
 class Family(object):
