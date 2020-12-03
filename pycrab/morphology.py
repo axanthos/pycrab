@@ -1659,7 +1659,8 @@ class Signature(tuple):
                                         list(affixes.values())))
 
         return tuple.__new__(cls, (ImmutableDict(stems),
-                                   ImmutableDict(stripped_stems),                                    ImmutableDict(affixes),
+                                   ImmutableDict(stripped_stems),
+                                   ImmutableDict(affixes),
                                    ImmutableDict(stripped_affixes), affix_side))
 
     @property
