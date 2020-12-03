@@ -92,40 +92,40 @@ def strip_index(affix):
         return affix[:location]
 
 
-def biograph(func):
-    """Decorator for updating word biographies after learning functions.
+# def biograph(func):
+    # """Decorator for updating word biographies after learning functions.
 
-        Args:
-            func (function): the function to decorate
+        # Args:
+            # func (function): the function to decorate
 
-        Returns:
-            decorated function.
+        # Returns:
+            # decorated function.
 
-        Todo:
-            - test prefix
+        # Todo:
+            # - test prefix
 
-    """
+    # """
 
-    @functools.wraps(func)
-    def wrapper_biograph(self, *args, **kwargs):
-        func(self, *args, **kwargs)
-        word_to_bigrams = collections.defaultdict(set)
-        if "affix_side" in kwargs:
-            affix_side = kwargs["affix_side"]
-        elif "prefix" in args:
-            affix_side = "prefix"
-        else:
-            affix_side = "suffix"
-        for bigram in self.get_bigrams(affix_side):
-            word_to_bigrams["".join(bigram)].add(bigram)
-        word_biographies = self.get_word_biographies(affix_side)
-        for word, bigrams in word_to_bigrams.items():
-            word_biographies[word][func.__name__] = bigrams
-        # for word in self.word_counts.keys():
-            # if word not in word_biographies:
-                # word_biographies[word][func.__name__] = {None}
-        self.get_analyses_list(affix_side).append(func.__name__)
-    return wrapper_biograph
+    # @functools.wraps(func)
+    # def wrapper_biograph(self, *args, **kwargs):
+        # func(self, *args, **kwargs)
+        # word_to_bigrams = collections.defaultdict(set)
+        # if "affix_side" in kwargs:
+            # affix_side = kwargs["affix_side"]
+        # elif "prefix" in args:
+            # affix_side = "prefix"
+        # else:
+            # affix_side = "suffix"
+        # for bigram in self.get_bigrams(affix_side):
+            # word_to_bigrams["".join(bigram)].add(bigram)
+        # word_biographies = self.get_word_biographies(affix_side)
+        # for word, bigrams in word_to_bigrams.items():
+            # word_biographies[word][func.__name__] = bigrams
+        # # for word in self.word_counts.keys():
+            # # if word not in word_biographies:
+                # # word_biographies[word][func.__name__] = {None}
+        # self.get_analyses_list(affix_side).append(func.__name__)
+    # return wrapper_biograph
 
 
 class ImmutableDict(dict):

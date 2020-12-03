@@ -24,7 +24,7 @@ import re
 from cached_property import cached_property
 from pycrab.null_affix import NULLAffix
 import pycrab.utils
-from pycrab.utils import ImmutableDict, biograph
+from pycrab.utils import ImmutableDict
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -232,19 +232,17 @@ class Morphology(object):
         Returns: nothing.
 
         """
-        self.word_counts = collections.Counter()
+        self.lexicon = dict()
 
         self.prefixal_signatures = dict()
         self.prefixal_families = set()
         self.prefixal_protostems = collections.defaultdict(set)
-        self.prefixal_word_biographies = collections.defaultdict(dict)
         self.prefixal_name_collisions = collections.Counter()
         self.prefixal_analyses_run = list()
 
         self.suffixal_signatures = dict()
         self.suffixal_families = set()
         self.suffixal_protostems = collections.defaultdict(set)
-        self.suffixal_word_biographies = collections.defaultdict(dict)
         self.suffixal_name_collisions = collections.Counter()
         self.suffixal_analyses_run = list()
 
@@ -283,22 +281,22 @@ class Morphology(object):
         else:
             return self.suffixal_families
 
-    def get_word_biographies(self, affix_side="suffix"):
-        """Returns the dict of suffixal or prefixal word biographies.
+    # def get_word_biographies(self, affix_side="suffix"):
+        # """Returns the dict of suffixal or prefixal word biographies.
 
-        Args:
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
+        # Args:
+            # affix_side (string, optional): either "suffix" (default) or
+                # "prefix".
 
-        Returns:
-            dict of word biographies (keys are words).
+        # Returns:
+            # dict of word biographies (keys are words).
 
-        """
+        # """
 
-        if affix_side == "prefix":
-            return self.prefixal_word_biographies
-        else:
-            return self.suffixal_word_biographies
+        # if affix_side == "prefix":
+            # return self.prefixal_word_biographies
+        # else:
+            # return self.suffixal_word_biographies
 
     def get_protostems(self, affix_side="suffix"):
         """Returns the dict of suffixal/prefixal protostems and continuations.
@@ -588,21 +586,17 @@ class Morphology(object):
             affixes = self.suffixes
             stems = self.suffixal_stems
 
-        try:
-            # Number of words.
-            lines.append("%-45s %10i" % (
-                "Number of words (corpus count):",
-                sum(v for v in self.word_counts.values())
-            ))
+        # Number of words.
+        lines.append("%-45s %10i" % (
+            "Number of words (corpus count):",
+            sum(word.count for word in self.lexicon.values()) # TODO: can there be no word counts?
+        ))
 
-            # Total letter count in words.
-            lines.append("%-45s %10i" % (
-                "Total letter count in words:",
-                sum(len(word) for word in self.word_counts)
-            ))
-        except AttributeError:
-            lines.append("%-54s 0" % "Number of words (corpus count):")
-            lines.append("%-54s 0" % "Total letter count in words:")
+        # Total letter count in words.
+        lines.append("%-45s %10i" % (
+            "Total letter count in words:",
+            sum(len(word) for word in self.lexicon) # TODO: can there be no words?
+        ))
 
         # Number of stems.
         lines.append("%-45s %10i" % ("Number of stems:", len(stems)))
@@ -793,7 +787,7 @@ class Morphology(object):
 
         # Get union of stems and words...
         stems = self.get_stems(affix_side)
-        entries = stems.union(self.word_counts.keys())
+        entries = stems.union(self.lexicon)
         if not entries:
             return("Morphology contains no words.")
 
@@ -841,16 +835,17 @@ class Morphology(object):
         """
 
         lines = list()
-        for word, biography in sorted(
-                self.get_word_biographies(affix_side).items()):
+        for word in sorted(self.lexicon):
             lines.append(word + ":")
-            for func in self.get_analyses_list(affix_side):
-                lines.append("\t" + func + ":")
-                try:
-                    for parse in sorted(biography[func]):
-                        lines.append("\t\t%s %s" % parse)
-                except KeyError:
-                    lines.append("\t\tunanalyzed")
+            for function in self.get_analyses_list(affix_side):
+                lines.append("\t" + function + ":")
+                parses = self.lexicon[word].get_biography(function, affix_side)
+                if parses:
+                    for parse in sorted(parses):
+                        lines.append("\t\t%s" % str(parse))
+                else:
+                    lines.append("\t\t%s" % word)
+
         return "\n".join(lines)
 
     def serialize_protostems(self, affix_side="suffix"):
@@ -924,31 +919,31 @@ class Morphology(object):
         else:
             self.suffixal_signatures[signature.affix_string] = signature
 
-    def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
-        """Return frequency counts for selected affixes and stems.
+    # def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
+        # """Return frequency counts for selected affixes and stems.
 
-        Args:
-            stems (set):
-                set of stems
-            affixes (set):
-                set of affixes
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
+        # Args:
+            # stems (set):
+                # set of stems
+            # affixes (set):
+                # set of affixes
+            # affix_side (string, optional): either "suffix" (default) or
+                # "prefix".
 
-        Returns:
-            pair of collection.Counter object (stem and affix count).
+        # Returns:
+            # pair of collection.Counter object (stem and affix count).
 
-        """
+        # """
 
-        stem_counts = collections.Counter()
-        affix_counts = collections.Counter()
-        for stem in stems:
-            for affix in affixes:
-                word = stem+affix if affix_side == "suffix" else affix+stem
-                word_count = self.word_counts[word]
-                stem_counts[stem] += word_count
-                affix_counts[affix] += word_count
-        return stem_counts, affix_counts
+        # stem_counts = collections.Counter()
+        # affix_counts = collections.Counter()
+        # for stem in stems:
+            # for affix in affixes:
+                # word = stem+affix if affix_side == "suffix" else affix+stem
+                # word_count = self.word_counts[word]
+                # stem_counts[stem] += word_count
+                # affix_counts[affix] += word_count
+        # return stem_counts, affix_counts
 
     def build_signatures(self, bigrams, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
@@ -973,6 +968,13 @@ class Morphology(object):
         else:
             self.suffixal_signatures = dict()
 
+        # Get stem and affix counts.
+        morpheme_counts = collections.Counter()
+        for word in self.lexicon.values():
+            for parse in word.get_parses(affix_side):
+                for morpheme in parse.morphemes:
+                    morpheme_counts[morpheme] += word.count
+
         # List all possible affixes of each stem...
         affixes = collections.defaultdict(set) # TODO: revert to dict of lists?
         if affix_side == "suffix":
@@ -988,19 +990,16 @@ class Morphology(object):
             stem_sets[tuple(sorted(affixes))].add(stem)
 
         # Build signatures based on sets of stems associated with affixes...
+        # TODO: can there be no word counts?
         for affixes, stems in stem_sets.items():
             if len(stems) >= min_num_stems:     # Require min number of stems.
-                if self.word_counts:
-                    stem_counts, affix_counts = self.get_stem_and_affix_count(
-                        stems, affixes, affix_side=affix_side)
-                    self.add_signature(stem_counts, affix_counts, affix_side)
-                else:   # If no word counts are available yet...
-                    self.add_signature(stems, affixes, affix_side)
+                stem_counts = {stem: morpheme_counts[stem] for stem in stems}
+                affix_counts = {afx: morpheme_counts[afx] for afx in affixes}
+                self.add_signature(stem_counts, affix_counts, affix_side)
 
         return len(stem_sets)
 
-
-    @biograph
+    #@biograph
     def find_signatures1(self, min_stem_len=MIN_STEM_LEN,
                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Find initial signatures (using Goldsmith's Lxa-Crab algorithm).
@@ -1019,13 +1018,16 @@ class Morphology(object):
 
         """
 
+        # Get the name of this function (to update word biographies).
+        func = inspect.currentframe().f_code.co_name
+
         protostems = set()
 
         # Invert words if needed (if affix side is prefix), then sort them...
         if affix_side == "suffix":
-            sorted_words = sorted(list(self.word_counts))
+            sorted_words = sorted(list(self.lexicon))
         else:
-            sorted_words = sorted(word[::-1] for word in self.word_counts)
+            sorted_words = sorted(word[::-1] for word in self.lexicon)
 
         # For each pair of successive words (in alphabetical order)...
         for idx in range(len(sorted_words)-1):
@@ -1048,7 +1050,7 @@ class Morphology(object):
         for protostem, continuation in continuations.items():
             protostem_lists[tuple(sorted(continuation))].add(protostem)
 
-        bigrams = set()
+        validated_bigrams = set()
 
         # For each continuation list...
         for continuations, protostems in protostem_lists.items():
@@ -1062,25 +1064,43 @@ class Morphology(object):
             continuations = [cont if len(cont) else NULL_AFFIX
                              for cont in continuations]
 
+            # Build candidate morpheme bigrams for this continuation list...
+            if affix_side == "suffix":
+                candidate_bigrams = set(itertools.product(protostems,
+                                                          continuations))
+            else:
+                candidate_bigrams = set(itertools.product(continuations,
+                                                          protostems))
+
             # If continuation list has min_num_stems stems or more...
             if len(protostems) >= min_num_stems:
 
-                # Store all corresponding morpheme bigrams...
-                if affix_side == "suffix":
-                    new_bigrams = set(itertools.product(protostems,
-                                                        continuations))
-                else:
-                    new_bigrams = set(itertools.product(continuations,
-                                                        protostems))
-                bigrams = bigrams.union(new_bigrams)
+                # Validate candidate bigrams...
+                validated_bigrams = validated_bigrams.union(candidate_bigrams)
 
-            # Store remaining protostems for later analysis...
+            # Else if continuation list doesn't have enough stems...
             else:
+
+                # Update biography of unanalyzed words...
+                for bigram in candidate_bigrams:
+                    word = "".join(bigram)
+                    self.lexicon[word].update_biography(func, Parse(bigram),
+                                                        affix_side)
+
+                # Store remaining protostems for later analysis...
                 self.get_protostems(affix_side).update({p: set(continuations)
                                                         for p in protostems})
 
+        # Update biography of analyzed words...
+        for bigram in validated_bigrams:
+            word = "".join(bigram)
+            self.lexicon[word].update_biography(func, Parse(bigram), affix_side)
+
         # Create signatures based on stored bigrams.
-        self.build_signatures(bigrams, affix_side)
+        self.build_signatures(validated_bigrams, affix_side)
+
+        # Mark analysis as run.
+        self.get_analyses_list(affix_side).append(func)
 
     def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
                         min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
@@ -1139,7 +1159,7 @@ class Morphology(object):
         else:
             self.suffixal_families = families
 
-    @biograph
+    #@biograph
     def widen_signatures(self, affix_side="suffix"):
         """Expand existing signatures with protostems that can be continued
         by all their affixes. In case of ambiguity, protostems are added to
@@ -1454,25 +1474,26 @@ class Morphology(object):
         if lowercase_input:
             wordlist = [word.lower() for word in wordlist]
 
-        # Count words and store word counts as attribute.
-        self.word_counts = collections.Counter(wordlist)
+        # Count words and store them in lexicon.
+        word_counts = collections.Counter(wordlist)
+        for word, count in word_counts.items():
+            self.lexicon[word] = Word(word, count)
 
         # Find suffixal signatures.
-        self.find_signatures1(min_stem_len, min_num_stems)
+        self.find_signatures1(min_stem_len, min_num_stems)  # TODO fix test_learn_from_wordlist
 
         # Find prefixal signatures.
-        self.find_signatures1(min_stem_len, min_num_stems,
-                              affix_side="prefix")
+        # self.find_signatures1(min_stem_len, min_num_stems,
+                              # affix_side="prefix")
 
         # Widen signatures.
-        self.widen_signatures(affix_side)
+        #self.widen_signatures(affix_side)
 
         # Split affixes.
         # self.split_affixes(affix_side)
 
         # Create signature families.
         self.create_families(num_seed_families, min_robustness, affix_side)
-
 
     def learn_from_string(self, input_string,
                           tokenization_regex=TOKENIZATION_REGEX,
@@ -1563,7 +1584,7 @@ class Morphology(object):
                                min_num_stems, num_seed_families,
                                min_robustness, affix_side=affix_side)
 
-    @biograph
+    #@biograph
     def _add_test_signatures(self):
         """"Add signatures to morphology for testing purposes."""
         self.add_signature(
@@ -1971,21 +1992,138 @@ class Word(object):
 
     """
 
-    def __init__(self, count=0):
+    def __init__(self, form, count=0):
         """__init__ method for class Word.
 
-        Besides the optional 'count' attribute it is initialized with, a word
-        also has attributes 'parses' (its current set of Parses, defaulting to
-        {word}), 'biography' (a mapping from learning function name to set of 
-        parses resulting from this function), and 'scratchpad' (a list of 
-        strings with information about this word).
-
         Args:
+            form (string): the word's form (i.e. the word itself)
             count (int): word count (defaults to 0).
 
         """
+        self.form = form
         self.count = count
-        self.parses = set()
+        self._suffixal_biography = dict()
+        self._prefixal_biography = dict()
+        self._suffixal_parses = set()
+        self._prefixal_parses = set()
+        self.scratchpad = list()
+
+    def get_biography(self, function, affix_side="suffix"):
+        """Get the word's biography of a given type.
+
+        Args:
+            function (string): name of learning function whose parses are
+                requested.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of Parses (possibly empty).
+
+        """
+
+        if affix_side == "prefix":
+            biography = self._prefixal_biography
+        else:
+            biography = self._prefixal_biography
+        if function not in biography:
+            biography[function] = set()
+        return biography[function]
+
+    def update_biography(self, function, parse, affix_side="suffix"):
+        """Add a parse to the word's biography of a given type.
+
+        Args:
+            function (string): name of learning function adding the parse.
+            parse (Parse object): parse added by learning function.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        """
+
+        biography = self.get_biography(function, affix_side)
+        try:
+            biography.add(parse)
+        except KeyError:
+            biography = {parse}
+
+        if affix_side == "prefix":
+            self._prefixal_parses = biography
+        else:
+            self._suffixal_parses = biography
+
+    @property
+    def suffixal_parses(self):
+        """Get the word's current suffixal parses.
+
+        Args: none.
+
+        Returns:
+            set of Parse objects.
+
+        """
+
+        return self.get_parses()
+
+    def prefixal_parses(self):
+        """Get the word's current prefixal parses.
+
+        Args: none.
+
+        Returns:
+            set of Parse objects.
+
+        """
+
+        return self.get_parses(affix_side="prefix")
+
+    def get_parses(self, affix_side="suffix"):
+        """Get the word's current parses of a given type.
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns:
+            set of Parse objects.
+
+        """
+
+        if affix_side == "prefix":
+            return self._prefixal_parses or {Parse(morphemes=[self.form])}
+        else:
+            return self._suffixal_parses or {Parse(morphemes=[self.form])}
+
+
+class Parse(object):
+    """A class for representing a word parse in pycrab.
+
+    Todo:
+        Examples
+        Tests
+
+    """
+
+    def __init__(self, morphemes):
+        """__init__ method for class Parse.
+
+        Args:
+            morphemes (iterable of strings): morphemes composing the word
+
+        Todo:
+            labels
+            
+        """
+        
+        self.morphemes = morphemes
+
+    def __str__(self):
+        """Formats the parse for display."""
+        return " ".join(morpheme for morpheme in self.morphemes)
+
+    def __lt__(self, other):
+        """Sorting function for Parse objects."""
+        return str(self) < str(other)
 
 
 class Family(object):
