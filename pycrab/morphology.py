@@ -993,9 +993,12 @@ class Morphology(object):
         # TODO: can there be no word counts?
         for affixes, stems in stem_sets.items():
             if len(stems) >= min_num_stems:     # Require min number of stems.
-                stem_counts = {stem: morpheme_counts[stem] for stem in stems}
-                affix_counts = {afx: morpheme_counts[afx] for afx in affixes}
-                self.add_signature(stem_counts, affix_counts, affix_side)
+                if morpheme_counts:
+                    stem_counts = {stem: morpheme_counts[stem] for stem in stems}
+                    affix_counts = {afx: morpheme_counts[afx] for afx in affixes}
+                    self.add_signature(stem_counts, affix_counts, affix_side)
+                else:
+                    self.add_signature(stems, affixes, affix_side)
 
         return len(stem_sets)
 
@@ -1480,11 +1483,10 @@ class Morphology(object):
             self.lexicon[word] = Word(word, count)
 
         # Find suffixal signatures.
-        self.find_signatures1(min_stem_len, min_num_stems)  # TODO fix test_learn_from_wordlist
+        self.find_signatures1(min_stem_len, min_num_stems, affix_side="suffix")
 
         # Find prefixal signatures.
-        # self.find_signatures1(min_stem_len, min_num_stems,
-                              # affix_side="prefix")
+        self.find_signatures1(min_stem_len, min_num_stems, affix_side="prefix")
 
         # Widen signatures.
         #self.widen_signatures(affix_side)
@@ -1672,10 +1674,10 @@ class Signature(tuple):
 
         # Compute stripped versions of stems and affixes...
         stripped_stems = [pycrab.utils.strip_index(s) for s in stems]
-        if issubclass(type(stems), dict):
+        if isinstance(stems, dict):
             stripped_stems = dict(zip(stripped_stems, list(stems.values())))
         stripped_affixes = [pycrab.utils.strip_index(a) for a in affixes]
-        if issubclass(type(affixes), dict):
+        if isinstance(affixes, dict):
             stripped_affixes = dict(zip(stripped_affixes,
                                         list(affixes.values())))
 

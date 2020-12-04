@@ -436,8 +436,20 @@ class TestMorphology(TestCase):
             ("cr", "y"),
             ("cr", "ied"),
         }
-        existing_morphology.word_counts = {"dry": 2, "cry": 1,
-                                           "dried": 1, "cried": 1}
+        existing_morphology.lexicon = {
+            "dry": morphology.Word("dry", 2),
+            "cry": morphology.Word("cry", 1),
+            "dried": morphology.Word("dried", 1),
+            "cried": morphology.Word("cried", 1),
+        }
+        existing_morphology.lexicon["dry"].update_biography("test", 
+                morphology.Parse(("dr", "y")))
+        existing_morphology.lexicon["cry"].update_biography("test", 
+                morphology.Parse(("cr", "y")))
+        existing_morphology.lexicon["dried"].update_biography("test", 
+                morphology.Parse(("dr", "ied")))
+        existing_morphology.lexicon["cried"].update_biography("test", 
+                morphology.Parse(("cr", "ied")))
         expected_morphology = morphology.Morphology(
             morphology.Signature(
                 stems={"cr": 2, "dr": 3},
@@ -445,4 +457,6 @@ class TestMorphology(TestCase):
             ),
         )
         existing_morphology.build_signatures(parses, min_num_stems=2)
+        print(existing_morphology.serialize_signatures())
+        print(expected_morphology.serialize_signatures())
         self.assertTrue(existing_morphology == expected_morphology)
