@@ -1085,10 +1085,10 @@ class Morphology(object):
             else:
 
                 # Update biography of unanalyzed words...
-                for bigram in candidate_bigrams:
-                    word = "".join(bigram)
-                    self.lexicon[word].update_biography(func, Parse((word,)),
-                                                        affix_side)
+                # for bigram in candidate_bigrams:
+                    # word = "".join(bigram)
+                    # self.lexicon[word].update_biography(func, Parse((word,)),
+                                                        # affix_side)
 
                 # Store remaining protostems for later analysis...
                 self.get_protostems(affix_side).update({p: set(continuations)
@@ -1155,6 +1155,13 @@ class Morphology(object):
 
                     # Flag protostem as previously added to a signature...
                     previously_added.add(protostem)
+
+        # Update biography of analyzed words and mark analysis as run...
+        func = inspect.currentframe().f_code.co_name
+        for bigram in bigrams:
+            word = "".join(bigram)
+            self.lexicon[word].update_biography(func, Parse(bigram), affix_side)
+        self.get_analyses_list(affix_side).append(func)
 
         # Update signatures to reflect bigrams.
         self.build_signatures(bigrams, affix_side)
@@ -1489,7 +1496,7 @@ class Morphology(object):
         self.find_signatures1(min_stem_len, min_num_stems, affix_side="prefix")
      
         # Widen signatures.
-        self.widen_signatures(affix_side)
+        #self.widen_signatures(affix_side)
 
         # Split affixes.
         # self.split_affixes(affix_side)
@@ -2118,7 +2125,7 @@ class Parse(object):
 
     def __str__(self):
         """Formats the parse for display."""
-        return " ".join(morpheme for morpheme in self.morphemes)
+        return " ".join(str(morpheme) for morpheme in self.morphemes)
 
     def __lt__(self, other):
         """Sorting function for Parse objects."""
