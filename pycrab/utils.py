@@ -137,7 +137,7 @@ class ImmutableDict(dict):
 
     def __init__(self, arg):
         # Initialize dict like collections.Counter.
-        super().__init__(collections.Counter(arg))
+        super(ImmutableDict, self).__init__(collections.Counter(arg))
 
     def __setitem__(self, key, value):
         raise TypeError("%r object does not support item assignment"

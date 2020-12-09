@@ -1087,7 +1087,7 @@ class Morphology(object):
                 # Update biography of unanalyzed words...
                 for bigram in candidate_bigrams:
                     word = "".join(bigram)
-                    self.lexicon[word].update_biography(func, Parse(bigram),
+                    self.lexicon[word].update_biography(func, Parse((word,)),
                                                         affix_side)
 
                 # Store remaining protostems for later analysis...
@@ -2027,7 +2027,7 @@ class Word(object):
         if affix_side == "prefix":
             biography = self._prefixal_biography
         else:
-            biography = self._prefixal_biography
+            biography = self._suffixal_biography
         if function not in biography:
             biography[function] = set()
         return biography[function]
@@ -2044,10 +2044,7 @@ class Word(object):
         """
 
         biography = self.get_biography(function, affix_side)
-        try:
-            biography.add(parse)
-        except KeyError:
-            biography = {parse}
+        biography.add(parse)
 
         if affix_side == "prefix":
             self._prefixal_parses = biography
@@ -2114,9 +2111,9 @@ class Parse(object):
 
         Todo:
             labels
-            
+
         """
-        
+
         self.morphemes = morphemes
 
     def __str__(self):
@@ -2126,6 +2123,14 @@ class Parse(object):
     def __lt__(self, other):
         """Sorting function for Parse objects."""
         return str(self) < str(other)
+
+    def __eq__(self, other):
+        """Test Parse object equality."""
+        return str(self) == str(other)
+
+    def __hash__(self):
+        """Hashing function for Parse objects."""
+        return hash(tuple(self.morphemes))
 
 
 class Family(object):
