@@ -1105,63 +1105,6 @@ class Morphology(object):
         # Mark analysis as run.
         self.get_analyses_list(affix_side).append(func)
 
-    def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
-                        min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
-                        affix_side="suffix"):
-        """Create families; each family has a nucleus signature, which comes
-           from the most robust signatures, and it finds other signatures which
-           are supersets of the nucleus.
-
-        Args:
-            num_seed_families (int, optional): the number of seed families to
-                create (defaults to NUM_SEED_FAMILIES).
-            min_robustness (float, optional): the minimal robustness for
-                a signature to be added to a family (defaults to
-                MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION).
-            affix_side (string, optional): either "suffix" (default) or
-                "prefix".
-
-        Returns: nothing.
-
-        Todo: test.
-
-        """
-
-        # Sort signatures by decreasing robustness.
-        signatures = self.get_signatures(affix_side)
-        signatures.sort(key=lambda signature: signature.robustness,
-                        reverse=True)
-
-        # Create families based on the N most robust signatures...
-        families = list()
-        actual_num_seed_families = min(NUM_SEED_FAMILIES, len(signatures))
-        for nucleus in signatures[:actual_num_seed_families]:
-            families.append(Family(nucleus.affix_string, morphology=self,
-                            affix_side=affix_side))
-
-        # Sort families by decreasing affix length.
-        families.sort(key=lambda family:
-                      len(family.nucleus.split(AFFIX_DELIMITER)), reverse=True)
-
-        # For each remaining signature...
-        for signature in signatures[actual_num_seed_families:]:
-
-            # Skip if its robustness is below threshold.
-            if signature.robustness < min_robustness:
-                continue
-
-            # Add it to the family with the largest nucleus that it contains...
-            for family in families:
-                if signature.contains(family.nucleus):
-                    family.children.add(signature.affix_string)
-                    break
-
-        # Store families in morphology...
-        if affix_side == "prefix":
-            self.prefixal_families = families
-        else:
-            self.suffixal_families = families
-
     #@biograph
     def widen_signatures(self, affix_side="suffix"):
         """Expand existing signatures with protostems that can be continued
@@ -1439,6 +1382,63 @@ class Morphology(object):
                 # biographies[word][func] = biographies[word][analyses[-1]]
         # analyses.append(func)
 
+    def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
+                        min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
+                        affix_side="suffix"):
+        """Create families; each family has a nucleus signature, which comes
+           from the most robust signatures, and it finds other signatures which
+           are supersets of the nucleus.
+
+        Args:
+            num_seed_families (int, optional): the number of seed families to
+                create (defaults to NUM_SEED_FAMILIES).
+            min_robustness (float, optional): the minimal robustness for
+                a signature to be added to a family (defaults to
+                MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION).
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: test.
+
+        """
+
+        # Sort signatures by decreasing robustness.
+        signatures = self.get_signatures(affix_side)
+        signatures.sort(key=lambda signature: signature.robustness,
+                        reverse=True)
+
+        # Create families based on the N most robust signatures...
+        families = list()
+        actual_num_seed_families = min(NUM_SEED_FAMILIES, len(signatures))
+        for nucleus in signatures[:actual_num_seed_families]:
+            families.append(Family(nucleus.affix_string, morphology=self,
+                            affix_side=affix_side))
+
+        # Sort families by decreasing affix length.
+        families.sort(key=lambda family:
+                      len(family.nucleus.split(AFFIX_DELIMITER)), reverse=True)
+
+        # For each remaining signature...
+        for signature in signatures[actual_num_seed_families:]:
+
+            # Skip if its robustness is below threshold.
+            if signature.robustness < min_robustness:
+                continue
+
+            # Add it to the family with the largest nucleus that it contains...
+            for family in families:
+                if signature.contains(family.nucleus):
+                    family.children.add(signature.affix_string)
+                    break
+
+        # Store families in morphology...
+        if affix_side == "prefix":
+            self.prefixal_families = families
+        else:
+            self.suffixal_families = families
+
     def learn_from_wordlist(self, wordlist, lowercase_input=LOWERCASE_INPUT,
                             min_stem_len=MIN_STEM_LEN,
                             min_num_stems=MIN_NUM_STEMS,
@@ -1487,9 +1487,9 @@ class Morphology(object):
 
         # Find prefixal signatures.
         self.find_signatures1(min_stem_len, min_num_stems, affix_side="prefix")
-
+     
         # Widen signatures.
-        #self.widen_signatures(affix_side)
+        self.widen_signatures(affix_side)
 
         # Split affixes.
         # self.split_affixes(affix_side)
