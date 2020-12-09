@@ -1280,7 +1280,7 @@ class Morphology(object):
                     print("5: added parse", new_parse.morphemes)
 
         # Create signatures based on stored bigrams.
-        self.build_signatures(bigrams, affix_side)
+        self.build_signatures(bigrams, affix_side, min_num_stems=1)
 
         # Mark analysis as run.
         self.get_analyses_list(affix_side).append(func)
