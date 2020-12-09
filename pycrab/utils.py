@@ -69,11 +69,12 @@ def format_if_shadow(affix_string, shadow_signatures):
         return affix_string
 
 
-def strip_index(affix):
+def strip_index(affix, affix_side="suffix"):
     """Returns a name without index for an affix.
 
     Args:
         affix (string): the affix from which the index should be removed.
+        affix_side (string, optional): either "suffix" (default) or "prefix".
 
     Returns:
         string.
@@ -89,7 +90,10 @@ def strip_index(affix):
     if location == -1:
         return affix
     else:
-        return affix[:location]
+        if affix_side == "prefix":
+            return affix[location+1:]
+        else:
+            return affix[:location]
 
 
 # def biograph(func):

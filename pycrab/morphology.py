@@ -783,39 +783,38 @@ class Morphology(object):
 
         """
 
+        stems_and_words = dict()
+
+        # For each word...
+        for word in self.lexicon:
+        
+            # Get its parses.
+            parses = self.lexicon[word].get_parses(affix_side)
+            
+            # If it has none, store it on its own...
+            if len(parses) == 1 and len(next(iter(parses)).morphemes) == 1:
+                stems_and_words[word] = set()
+
+            # Else for each parse, extract stem and link with word...
+            else:
+                for parse in parses:
+                    mor = parse.morphemes
+                    stem = mor[-1] if affix_side == "prefix" else mor[0]
+                    try:
+                        stems_and_words[stem].add(word)
+                    except KeyError:
+                        stems_and_words[stem] = {word}
+
         lines = list()
 
-        # Get union of stems and words...
-        stems = self.get_stems(affix_side)
-        entries = stems.union(self.lexicon)
-        if not entries:
-            return("Morphology contains no words.")
-
-        # Get continuations of stems...
-        bigrams = self.get_bigrams(affix_side, stripped=True)
-        continuations = collections.defaultdict(set)
-        analyzed_words = set()
-        if affix_side == "prefix":
-            for prefix, stem in bigrams:
-                continuations[stem].add(prefix)
-                analyzed_words.add(prefix + stem)
-        else:
-            for stem, suffix in bigrams:
-                continuations[stem].add(suffix)
-                analyzed_words.add(stem + suffix)
-
         # Format each stem or word...
-        for entry in sorted(entries):
-            if entry in stems:
+        for entry, words in sorted(stems_and_words.items()):
+            if words:
                 if affix_side == "prefix":
-                    lines.append(entry + ":\t" + "\t".join(
-                                 c + entry for c in sorted(continuations[entry])
-                                 ))
+                    lines.append(entry + " :\t" + "\t".join(sorted(words)))
                 else:
-                    lines.append(entry + ":\t" + "\t".join(
-                                 entry + c for c in sorted(continuations[entry])
-                                 ))
-            elif entry not in analyzed_words:
+                    lines.append(entry + " :\t" + "\t".join(sorted(words)))
+            else:
                 lines.append(entry + "*")
 
         return "\n".join(lines) + "\n"
@@ -888,8 +887,8 @@ class Morphology(object):
 
         if affix_side == "prefix":
             self.prefixal_name_collisions[affix] += 1
-            return "%s%s%i" % (affix, AFFIX_MARKER,
-                               self.prefixal_name_collisions[affix])
+            return "%i%s%s" % (self.prefixal_name_collisions[affix],
+                               AFFIX_MARKER, affix)
         else:
             self.suffixal_name_collisions[affix] += 1
             return "%s%s%i" % (affix, AFFIX_MARKER,
@@ -1089,7 +1088,7 @@ class Morphology(object):
         # Update biography of analyzed words...
         for bigram in validated_bigrams:
             word = "".join(bigram)
-            self.lexicon[word].update_biography(func, Parse(bigram), affix_side)
+            self.lexicon[word].add_to_biography(func, Parse(bigram), affix_side)
 
         # Create signatures based on stored bigrams.
         self.build_signatures(validated_bigrams, affix_side)
@@ -1152,7 +1151,7 @@ class Morphology(object):
         func = inspect.currentframe().f_code.co_name
         for bigram in bigrams:
             word = "".join(bigram)
-            self.lexicon[word].update_biography(func, Parse(bigram), affix_side)
+            self.lexicon[word].add_to_biography(func, Parse(bigram), affix_side)
         self.get_analyses_list(affix_side).append(func)
 
         # Update signatures to reflect bigrams.
@@ -1205,12 +1204,15 @@ class Morphology(object):
 
         """
 
+        # Get the name of this function (to update word biographies).
+        func = inspect.currentframe().f_code.co_name
+
         # Get all analyses (stem + signature) associated with each word...
         word_to_analyses = collections.defaultdict(set)
         for sig in self.get_signatures(affix_side):
             for bigram in sig.bigrams:
                 stem = bigram[1] if affix_side == "prefix" else bigram[0]
-                word_to_analyses["".join(parse)].add((stem, sig.affix_string))
+                word_to_analyses["".join(bigram)].add((stem, sig.affix_string))
 
         # Initialize mapping from biparses to sets of stems.
         biparse_to_stems = collections.defaultdict(set)
@@ -1245,19 +1247,21 @@ class Morphology(object):
                     print("%s\t"*5 % (diff, short_stem, short_stem_sig_string,
                                       long_stem, long_stem_sig_string))
 
-        # Get current state of bigrams and word biographies...
+        # Get current state of bigrams...
         bigrams = self.get_bigrams(affix_side)
-        biographies = self.get_word_biographies(affix_side)
+        #biographies = self.get_word_biographies(affix_side)
 
-        # Get the name of this function (to update biographies).
-        # func = inspect.currentframe().f_code.co_name
+        # Copy current word parses...
+        for word in self.lexicon:
+            for parse in self.lexicon[word].get_parses(affix_side):
+                self.lexicon[word].add_to_biography(func, parse, affix_side)
 
         # For each stored biparse and associated short stems
         for (biparse, short_stems) in biparse_to_stems.items():
             diff, short_stem_sig_string, long_stem_sig_string = biparse
 
             # Add index to diff.
-            indexed_diff = self.add_new_index(diff)
+            indexed_diff = self.add_new_index(diff, affix_side)
 
             # Build sets of affixes for new short and long stem signatures...
             short_stem_sig_object = self.get_signature(short_stem_sig_string,
@@ -1276,26 +1280,40 @@ class Morphology(object):
 
             print(biparse, short_stems)
             for stem in short_stems:
-                bigrams.add((stem, indexed_diff))
-                print("1: added bigram", stem, indexed_diff)
+                new_bigram = switch_if_needed((stem, indexed_diff), affix_side)
+                bigrams.add(new_bigram)
+                print("1: added bigram", new_bigram)
                 for affix in short_stem_sig_object.affixes:
-                    if affix == diff:
-                        old_bigram = switch_if_needed((stem, NULL_AFFIX),
-                                                       affix_side)
-                    elif affix.startswith(diff):
+                    if affix.startswith(diff):
                         old_bigram = switch_if_needed((stem, affix), affix_side)
-                    else:
-                        continue
-                    bigrams.discard(old_bigram)
-                    print("2: dicarded bigram", *old_bigram)
+                        word = "".join(old_bigram)
+                        bigrams.discard(old_bigram)
+                        self.lexicon[word].discard_from_biography(
+                                func, Parse(old_bigram), affix_side)
+                        print("2: discarded bigram and parse", old_bigram)
             for affix in long_stem_sig_object.affixes:
-                bigrams.add((indexed_diff, pycrab.utils.strip_index(affix)))
-                print("3: added bigram", indexed_diff,
-                      pycrab.utils.strip_index(affix))
+                new_bigram = switch_if_needed((indexed_diff, affix), affix_side)
+                bigrams.add(new_bigram)
+                print("3: added bigram", new_bigram)
                 for stem in short_stems:
-                    old_bigram = switch_if_needed((stem+diff, affix), affix_side)
+                    new_stem = stem+diff if affix_side == "suffix" else diff+stem
+                    old_bigram = switch_if_needed((new_stem, affix), affix_side)
                     bigrams.discard(old_bigram)
-                    print("4: dicarded bigram", *old_bigram)
+                    word = "".join(old_bigram)
+                    self.lexicon[word].discard_from_biography(
+                            func, Parse(old_bigram), affix_side)
+                    print("4: discarded bigram and parse", old_bigram)
+                    new_parse = Parse(switch_if_needed((stem, indexed_diff, 
+                                                        affix), affix_side))
+                    self.lexicon[word].add_to_biography(func, new_parse, 
+                                                        affix_side)
+                    print("5: added parse", new_parse.morphemes)
+
+        # Create signatures based on stored bigrams.
+        self.build_signatures(bigrams, affix_side)
+
+        # Mark analysis as run.
+        self.get_analyses_list(affix_side).append(func)
 
                 # stripped_affix = pycrab.utils.strip_index(affix)
                 # if stripped_affix == diff:
@@ -1372,7 +1390,7 @@ class Morphology(object):
                         # biographies[to_rewrite][func] = {new_analysis}
 
         # Update signatures to reflect bigrams.
-        self.build_signatures(bigrams, affix_side)
+        #self.build_signatures(bigrams, affix_side)
 
         # Update remaining word biographies and mark this analysis as run...
         # analyses = self.get_analyses_list(affix_side)
@@ -1491,7 +1509,7 @@ class Morphology(object):
         self.widen_signatures(affix_side)
 
         # Split affixes.
-        # self.split_affixes(affix_side)
+        self.split_affixes(affix_side)
 
         # Create signature families.
         self.create_families(num_seed_families, min_robustness, affix_side)
@@ -2031,7 +2049,7 @@ class Word(object):
             biography[function] = set()
         return biography[function]
 
-    def update_biography(self, function, parse, affix_side="suffix"):
+    def add_to_biography(self, function, parse, affix_side="suffix"):
         """Add a parse to the word's biography of a given type.
 
         Args:
@@ -2044,6 +2062,25 @@ class Word(object):
 
         biography = self.get_biography(function, affix_side)
         biography.add(parse)
+
+        if affix_side == "prefix":
+            self._prefixal_parses = biography
+        else:
+            self._suffixal_parses = biography
+
+    def discard_from_biography(self, function, parse, affix_side="suffix"):
+        """Discard a parse from the word's biography of a given type.
+
+        Args:
+            function (string): name of learning function discarding the parse.
+            parse (Parse object): parse discarded by learning function.
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        """
+
+        biography = self.get_biography(function, affix_side)
+        biography.discard(parse)
 
         if affix_side == "prefix":
             self._prefixal_parses = biography
