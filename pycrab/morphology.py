@@ -787,10 +787,10 @@ class Morphology(object):
 
         # For each word...
         for word in self.lexicon:
-        
+
             # Get its parses.
             parses = self.lexicon[word].get_parses(affix_side)
-            
+
             # If it has none, store it on its own...
             if len(parses) == 1 and len(next(iter(parses)).morphemes) == 1:
                 stems_and_words[word] = set()
@@ -918,32 +918,6 @@ class Morphology(object):
         else:
             self.suffixal_signatures[signature.affix_string] = signature
 
-    # def get_stem_and_affix_count(self, stems, affixes, affix_side="suffix"):
-        # """Return frequency counts for selected affixes and stems.
-
-        # Args:
-            # stems (set):
-                # set of stems
-            # affixes (set):
-                # set of affixes
-            # affix_side (string, optional): either "suffix" (default) or
-                # "prefix".
-
-        # Returns:
-            # pair of collection.Counter object (stem and affix count).
-
-        # """
-
-        # stem_counts = collections.Counter()
-        # affix_counts = collections.Counter()
-        # for stem in stems:
-            # for affix in affixes:
-                # word = stem+affix if affix_side == "suffix" else affix+stem
-                # word_count = self.word_counts[word]
-                # stem_counts[stem] += word_count
-                # affix_counts[affix] += word_count
-        # return stem_counts, affix_counts
-
     def build_signatures(self, bigrams, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
         """Construct all signatures of a given type based on a set of morpheme
@@ -1001,7 +975,6 @@ class Morphology(object):
 
         return len(stem_sets)
 
-    #@biograph
     def find_signatures1(self, min_stem_len=MIN_STEM_LEN,
                          min_num_stems=MIN_NUM_STEMS, affix_side="suffix"):
         """Find initial signatures (using Goldsmith's Lxa-Crab algorithm).
@@ -1096,7 +1069,6 @@ class Morphology(object):
         # Mark analysis as run.
         self.get_analyses_list(affix_side).append(func)
 
-    #@biograph
     def widen_signatures(self, affix_side="suffix"):
         """Expand existing signatures with protostems that can be continued
         by all their affixes. In case of ambiguity, protostems are added to
@@ -1249,7 +1221,6 @@ class Morphology(object):
 
         # Get current state of bigrams...
         bigrams = self.get_bigrams(affix_side)
-        #biographies = self.get_word_biographies(affix_side)
 
         # Copy current word parses...
         for word in self.lexicon:
@@ -1268,8 +1239,6 @@ class Morphology(object):
                                                        affix_side)
             long_stem_sig_object = self.get_signature(long_stem_sig_string,
                                                       affix_side)
-            # new_short_stem_affixes = {indexed_diff}
-            # new_long_stems_affixes = set(long_stem_sig_object.stripped_affixes)
 
             # Utility unction for switching morphemes depending on affix side...
             def switch_if_needed(my_tuple, affix_side="suffix"):
@@ -1278,6 +1247,7 @@ class Morphology(object):
                 else:
                     return my_tuple
 
+            # Update bigrams and parses...
             print(biparse, short_stems)
             for stem in short_stems:
                 new_bigram = switch_if_needed((stem, indexed_diff), affix_side)
@@ -1303,9 +1273,9 @@ class Morphology(object):
                     self.lexicon[word].discard_from_biography(
                             func, Parse(old_bigram), affix_side)
                     print("4: discarded bigram and parse", old_bigram)
-                    new_parse = Parse(switch_if_needed((stem, indexed_diff, 
+                    new_parse = Parse(switch_if_needed((stem, indexed_diff,
                                                         affix), affix_side))
-                    self.lexicon[word].add_to_biography(func, new_parse, 
+                    self.lexicon[word].add_to_biography(func, new_parse,
                                                         affix_side)
                     print("5: added parse", new_parse.morphemes)
 
@@ -1314,90 +1284,6 @@ class Morphology(object):
 
         # Mark analysis as run.
         self.get_analyses_list(affix_side).append(func)
-
-                # stripped_affix = pycrab.utils.strip_index(affix)
-                # if stripped_affix == diff:
-                    # new_long_stems_affixes.add(NULL_AFFIX)
-                    # print("1: added", str(NULL_AFFIX), "to new long stem sig")
-                # elif affix_side == "suffix" and stripped_affix.startswith(diff):
-                    # new_long_stems_affixes.add(affix[len(diff):])
-                    # print("2: added", affix[len(diff):], "to new long stem sig")
-                # elif affix_side == "prefix" and stripped_affix.endswith(diff):
-                    # new_long_stems_affixes.add(affix[:-len(diff)])
-                    # print("3: added", affix[:-len(diff)], "to new long stem sig")
-                # else:
-                    # new_short_stem_affixes.add(affix)
-                    # print("4: added", affix, "to new short stem sig")
-
-            # # TODO: Store for later output
-            # print("[%s]_%s\t==>\t%s\t%s\t%s\t%s" % ((
-                # AFFIX_DELIMITER.join(str(af)
-                                     # for af in sorted(new_short_stem_affixes)),
-                # diff,
-                # AFFIX_DELIMITER.join(str(af)
-                                     # for af in sorted(new_long_stems_affixes)),
-                # short_stem_sig_string,
-                # long_stem_sig_string,
-                # short_stems,
-            # )))
-
-            # # Initialize dict for storing rewrite rules (for biographies).
-            # # rewrite = dict()
-
-            # # Create new bigram for diff + each affix in new long stem sig...
-            # for affix in new_long_stems_affixes:
-                # new_bigram = switch_if_needed((indexed_diff, affix), affix_side)
-                # bigrams.add(new_bigram)
-                # print("1: added bigram", *new_bigram)
-
-                # # Store corresponding rewrite rule (for biographies)
-                # # to_rewrite = affix+diff if affix_side == "prefix" else diff+affix
-                # # rewrite[to_rewrite] = str(new_parse[0]) + " " + str(new_parse[1])
-                # # print("new rewrite rule:", to_rewrite, "==>", rewrite[to_rewrite])
-
-            # # For each short stem associated with this biparse...
-            # for stem in short_stems:
-
-                # # Create new bigram for stem + indexed diff...
-                # new_bigram = switch_if_needed((stem, indexed_diff), affix_side)
-                # bigrams.add(new_bigram)
-                # print("2: added bigram", *new_bigram)
-
-                # # Discard all bigrams in long stem signature...
-                # for affix in long_stem_sig_object.affixes:
-                    # stem_and_diff = "".join(switch_if_needed((stem, diff),
-                                                             # affix_side))
-                    # old_bigram = switch_if_needed((stem_and_diff, affix),
-                                                  # affix_side)
-                    # bigrams.discard(old_bigram)
-                    # print("3: discarded bigram", *old_bigram)
-
-                # # In short stem signature, discard all bigrams whose suffix
-                # # starts with diff (or whose prefix ends with diff)...
-                # for affix in short_stem_sig_object.affixes:
-                    # if ((affix_side == "suffix" and affix.startswith(diff))
-                        # or (affix_side == "prefix" and affix.endswith(diff))):
-                        # old_bigram = switch_if_needed((stem, affix), affix_side)
-                        # bigrams.discard(old_bigram)
-                        # print("4: discarded bigram", *old_bigram)
-
-                        # Apply rewrite rules and update relevant biographies...
-                        # affix_seq = rewrite[affix].replace(":", "")
-                        # to_rewrite = affix+stem if affix_side == "prefix"   \
-                                     # else stem+affix
-                        # new_analysis = switch_if_needed((stem, affix_seq),
-                                                        # affix_side)
-                        # biographies[to_rewrite][func] = {new_analysis}
-
-        # Update signatures to reflect bigrams.
-        #self.build_signatures(bigrams, affix_side)
-
-        # Update remaining word biographies and mark this analysis as run...
-        # analyses = self.get_analyses_list(affix_side)
-        # for word in biographies:
-            # if func not in biographies[word]:
-                # biographies[word][func] = biographies[word][analyses[-1]]
-        # analyses.append(func)
 
     def create_families(self, num_seed_families=NUM_SEED_FAMILIES,
                         min_robustness=MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,

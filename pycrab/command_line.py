@@ -5,6 +5,10 @@
 
 This module provides functionality for command-line usage of pycrab.
 
+Todo:
+    - more sensible defaults (-s and -l)
+    - config file
+
 """
 
 import argparse

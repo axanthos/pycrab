@@ -301,42 +301,11 @@ class TestMorphology(TestCase):
             affix_side="prefix")
         os.remove(name)
 
-    # def test_get_stem_and_affix_count_prefix(self):
-        # my_morphology = morphology.Morphology()
-        # my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
-                                     # "wanting": 1, "undo": 4, "redo": 3}
-        # stems = {"do"}
-        # affixes = {"un", "re"}
-        # expected_stem_counts = {"do": 7}
-        # expected_affix_counts = {"un": 4, "re": 3}
-        # self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes,
-                         # "prefix"), (expected_stem_counts,
-                         # expected_affix_counts))
-
-    # def test_get_stem_and_affix_count_suffix(self):
-        # my_morphology = morphology.Morphology()
-        # my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
-                                     # "wanting": 1, "undo": 4, "redo": 3}
-        # stems = {"add", "want"}
-        # affixes = {"ed", "ing"}
-        # expected_stem_counts = {"add": 6, "want": 3}
-        # expected_affix_counts = {"ed": 6, "ing": 3}
-        # self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
-                         # (expected_stem_counts, expected_affix_counts))
-
     def test_add_new_index_initial(self):
         my_morphology = morphology.Morphology()
         expected_affix = "af:1".replace(":", morphology.AFFIX_MARKER)
         self.assertEqual(my_morphology.add_new_index("af"), expected_affix)
         
-    # def test_get_current_parses_analyzed_word(self):
-        # self.assertEqual(self.morphology.get_current_parses("added"), 
-                         # ("add", "ed"))
-    
-    # def test_get_current_parses_unanalyzed_word(self):
-        # self.assertEqual(self.morphology.get_current_parses("unanalyzed"), 
-                         # ({"unanalyzed"}))
-    
     def test_suffixal_bigrams(self):
         expected_bigrams = {
             ("want", morphology.NULL_AFFIX),
