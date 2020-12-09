@@ -1081,16 +1081,8 @@ class Morphology(object):
                 # Validate candidate bigrams...
                 validated_bigrams = validated_bigrams.union(candidate_bigrams)
 
-            # Else if continuation list doesn't have enough stems...
+            # Else store remaining protostems for later analysis...
             else:
-
-                # Update biography of unanalyzed words...
-                # for bigram in candidate_bigrams:
-                    # word = "".join(bigram)
-                    # self.lexicon[word].update_biography(func, Parse((word,)),
-                                                        # affix_side)
-
-                # Store remaining protostems for later analysis...
                 self.get_protostems(affix_side).update({p: set(continuations)
                                                         for p in protostems})
 
@@ -1494,9 +1486,9 @@ class Morphology(object):
 
         # Find prefixal signatures.
         self.find_signatures1(min_stem_len, min_num_stems, affix_side="prefix")
-     
+
         # Widen signatures.
-        #self.widen_signatures(affix_side)
+        self.widen_signatures(affix_side)
 
         # Split affixes.
         # self.split_affixes(affix_side)
