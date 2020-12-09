@@ -1963,6 +1963,9 @@ class Word(object):
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
 
+        Todo:
+            test
+            
         """
 
         biography = self.get_biography(function, affix_side)

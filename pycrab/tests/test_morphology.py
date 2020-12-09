@@ -411,13 +411,13 @@ class TestMorphology(TestCase):
             "dried": morphology.Word("dried", 1),
             "cried": morphology.Word("cried", 1),
         }
-        existing_morphology.lexicon["dry"].update_biography("test", 
+        existing_morphology.lexicon["dry"].add_to_biography("test", 
                 morphology.Parse(("dr", "y")))
-        existing_morphology.lexicon["cry"].update_biography("test", 
+        existing_morphology.lexicon["cry"].add_to_biography("test", 
                 morphology.Parse(("cr", "y")))
-        existing_morphology.lexicon["dried"].update_biography("test", 
+        existing_morphology.lexicon["dried"].add_to_biography("test", 
                 morphology.Parse(("dr", "ied")))
-        existing_morphology.lexicon["cried"].update_biography("test", 
+        existing_morphology.lexicon["cried"].add_to_biography("test", 
                 morphology.Parse(("cr", "ied")))
         expected_morphology = morphology.Morphology(
             morphology.Signature(
