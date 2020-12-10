@@ -36,51 +36,10 @@ def main():
                     "Crab algorithm.",
     )
     parser.add_argument(
-        "-l", "--lowercase",
-        help="Lowercase input text",
-        action="store_true" if pycrab.morphology.LOWERCASE_INPUT
-                            else "store_false"
-    )
-    parser.add_argument(
-        "-p", "--prefix",
-        help="Learn prefixal (instead of suffixal) morphology",
-        action="store_true",
-    )
-    parser.add_argument(
-        "-i", "--input",
-        help="Path to the text file containing the data to analyze",
-        required=True,
-    )
-    parser.add_argument(
         "-e", "--encoding",
         help="Input file encoding (default: %s)" %
              pycrab.morphology.INPUT_ENCODING,
         default=pycrab.morphology.INPUT_ENCODING,
-    )
-    parser.add_argument(
-        "-o", "--output",
-        help="Base filename (without suffix) for output files "
-             "(default: print to screen)",
-    )
-    parser.add_argument(
-        "-t", "--token",
-        help="A regular expression to be used for tokenizing input data "
-             "(default: '%s')" % pycrab.morphology.TOKENIZATION_REGEX,
-        default=pycrab.morphology.TOKENIZATION_REGEX,
-    )
-    parser.add_argument(
-        "-s", "--min_stem_length",
-        help="The minimum number of characters in a stem (default: %i)" %
-             pycrab.morphology.MIN_STEM_LEN,
-        default=pycrab.morphology.MIN_STEM_LEN,
-        type=int,
-    )
-    parser.add_argument(
-        "-n", "--min_num_stems",
-        help="The minimum number of stems for creating a signature "
-             "(default: %i)" % pycrab.morphology.MIN_NUM_STEMS,
-        default=pycrab.morphology.MIN_NUM_STEMS,
-        type=int,
     )
     parser.add_argument(
         "-f", "--num_seed_families",
@@ -90,12 +49,53 @@ def main():
         type=int,
     )
     parser.add_argument(
+        "-i", "--input",
+        help="Path to the text file containing the data to analyze",
+        required=True,
+    )
+    parser.add_argument(
+        "-l", "--lowercase",
+        help="Lowercase input text",
+        action="store_true" if pycrab.morphology.LOWERCASE_INPUT
+                            else "store_false"
+    )
+    parser.add_argument(
+        "-n", "--min_num_stems",
+        help="The minimum number of stems for creating a signature "
+             "(default: %i)" % pycrab.morphology.MIN_NUM_STEMS,
+        default=pycrab.morphology.MIN_NUM_STEMS,
+        type=int,
+    )
+    parser.add_argument(
+        "-o", "--output",
+        help="Base filename (without suffix) for output files "
+             "(default: print to screen)",
+    )
+    parser.add_argument(
+        "-p", "--prefix",
+        help="Learn prefixal (instead of suffixal) morphology",
+        action="store_true",
+    )
+    parser.add_argument(
         "-r", "--min_robustness",
         help="minimal robustness required for a signature to be considered "
              "for inclusion in a family (default: %i)" %
              pycrab.morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
         default=pycrab.morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
         type=int,
+    )
+    parser.add_argument(
+        "-s", "--min_stem_length",
+        help="The minimum number of characters in a stem (default: %i)" %
+             pycrab.morphology.MIN_STEM_LEN,
+        default=pycrab.morphology.MIN_STEM_LEN,
+        type=int,
+    )
+    parser.add_argument(
+        "-t", "--token",
+        help="A regular expression to be used for tokenizing input data "
+             "(default: '%s')" % pycrab.morphology.TOKENIZATION_REGEX,
+        default=pycrab.morphology.TOKENIZATION_REGEX,
     )
 
     # Parse and process args.
