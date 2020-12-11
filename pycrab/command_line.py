@@ -68,7 +68,7 @@ def main():
     )
     parser.add_argument(
         "-o", "--output",
-        help="Base filename (without suffix) for output files "
+        help="Path to the folder where output files will be created "
              "(default: print to screen)",
     )
     parser.add_argument(
@@ -127,15 +127,26 @@ def main():
         }
 
         if args.output:
-            base_path = Path(args.input).parent / args.output
+            output_path = Path(args.output)
+            try:
+                output_path.mkdir()
+            except FileExistsError:
+                overwrite = None
+                while overwrite != "y" and overwrite != "n":
+                    overwrite = input("Overwrite contents of existing "
+                                      "'%s' folder? [y/n]: " % output_path)
+                if overwrite == "n":
+                    print("Operation canceled.")
+                    exit()
+                
         for filename, result in results.items():
             if args.output:
                 try:
-                    path = "%s_%s.txt" % (base_path, filename)
+                    path = output_path / Path("%s.txt" % filename)
                     sys.stdout = open(path, 'w')
                 except IOError:
                     print("Couldn't open file %s, printing results to screen." %
-                          args.output)
+                          path)
             if not sys.stdout.name.endswith(".txt"):
                 print("#" * 80 + "\n")
             print(result)
