@@ -38,7 +38,7 @@ __status__ = "development"
 MIN_NUM_STEMS = 2
 """Module-level constant for the min number of stems in a signature."""
 
-MIN_STEM_LEN = 2
+MIN_STEM_LEN = 4
 """Module-level constant for the min number of letters in a stem."""
 
 NUM_SEED_FAMILIES = 30

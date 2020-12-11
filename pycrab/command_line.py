@@ -36,6 +36,12 @@ def main():
                     "Crab algorithm.",
     )
     parser.add_argument(
+        "-c", "--case_sensitive",
+        help="Take case differences into account "
+             "(rather than lowercasing input text)",
+        action="store_true"
+    )
+    parser.add_argument(
         "-e", "--encoding",
         help="Input file encoding (default: %s)" %
              pycrab.morphology.INPUT_ENCODING,
@@ -52,12 +58,6 @@ def main():
         "-i", "--input",
         help="Path to the text file containing the data to analyze",
         required=True,
-    )
-    parser.add_argument(
-        "-l", "--lowercase",
-        help="Lowercase input text",
-        action="store_true" if pycrab.morphology.LOWERCASE_INPUT
-                            else "store_false"
     )
     parser.add_argument(
         "-n", "--min_num_stems",
@@ -107,7 +107,7 @@ def main():
             input_file_path=args.input,
             encoding=args.encoding,
             tokenization_regex=args.token,
-            lowercase_input=args.lowercase,
+            lowercase_input=not args.case_sensitive,
             min_stem_len=args.min_stem_length,
             min_num_stems=args.min_num_stems,
             num_seed_families=args.num_seed_families,
