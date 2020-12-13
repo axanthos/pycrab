@@ -12,6 +12,7 @@ Todo:
 """
 
 import argparse
+import errno
 from pathlib import Path
 import sys
 
@@ -130,14 +131,17 @@ def main():
             output_path = Path(args.output)
             try:
                 output_path.mkdir()
-            except FileExistsError:
-                overwrite = None
-                while overwrite != "y" and overwrite != "n":
-                    overwrite = input("Overwrite contents of existing "
-                                      "'%s' folder? [y/n]: " % output_path)
-                if overwrite == "n":
-                    print("Operation canceled.")
-                    exit()
+            except OSError as e:
+                if e.errno == errno.EEXIST:
+                    overwrite = None
+                    while overwrite != "y" and overwrite != "n":
+                        overwrite = input("Overwrite contents of existing "
+                                          "'%s' folder? [y/n]: " % output_path)
+                    if overwrite == "n":
+                        print("Operation canceled.")
+                        exit()
+                else:
+                    raise
                 
         for filename, result in results.items():
             if args.output:
