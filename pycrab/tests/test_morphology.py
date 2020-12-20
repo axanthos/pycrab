@@ -264,8 +264,7 @@ class TestMorphology(TestCase):
         wordlist_lower = [word.lower() for word in wordlist]
         my_morphology.learn_from_wordlist(wordlist, True, 1, 1,
                                           affix_side="prefix")
-        mock_find_signatures1.assert_called_with(Counter(wordlist_lower), 1, 1,
-                                                 affix_side="prefix")
+        mock_find_signatures1.assert_called_with(1, 1, affix_side="prefix")
 
     @patch('pycrab.Morphology.find_signatures1')
     def test_learn_from_wordlist_not_lower(self, mock_find_signatures1):
@@ -273,8 +272,7 @@ class TestMorphology(TestCase):
         wordlist = ["Test", "data", "test"]
         my_morphology.learn_from_wordlist(wordlist, False, 1, 1,
                                           affix_side="prefix")
-        mock_find_signatures1.assert_called_with(Counter(wordlist), 1, 1,
-                                                 affix_side="prefix")
+        mock_find_signatures1.assert_called_with(1, 1, affix_side="prefix")
 
     @patch('pycrab.Morphology.learn_from_wordlist')
     def test_learn_from_string(self, mock_learn_from_wordlist):
@@ -303,31 +301,13 @@ class TestMorphology(TestCase):
             affix_side="prefix")
         os.remove(name)
 
-    def test_get_stem_and_affix_count_prefix(self):
+    def test_add_new_index_initial(self):
         my_morphology = morphology.Morphology()
-        my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
-                                     "wanting": 1, "undo": 4, "redo": 3}
-        stems = {"do"}
-        affixes = {"un", "re"}
-        expected_stem_counts = {"do": 7}
-        expected_affix_counts = {"un": 4, "re": 3}
-        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes,
-                         "prefix"), (expected_stem_counts,
-                         expected_affix_counts))
-
-    def test_get_stem_and_affix_count_suffix(self):
-        my_morphology = morphology.Morphology()
-        my_morphology.word_counts = {"added": 4, "adding": 2, "wanted": 2,
-                                     "wanting": 1, "undo": 4, "redo": 3}
-        stems = {"add", "want"}
-        affixes = {"ed", "ing"}
-        expected_stem_counts = {"add": 6, "want": 3}
-        expected_affix_counts = {"ed": 6, "ing": 3}
-        self.assertEqual(my_morphology.get_stem_and_affix_count(stems, affixes),
-                         (expected_stem_counts, expected_affix_counts))
-
-    def test_suffixal_parses(self):
-        expected_parses = {
+        expected_affix = "af:1".replace(":", morphology.AFFIX_MARKER)
+        self.assertEqual(my_morphology.add_new_index("af"), expected_affix)
+        
+    def test_suffixal_bigrams(self):
+        expected_bigrams = {
             ("want", morphology.NULL_AFFIX),
             ("want", "ed"),
             ("want", "ing"),
@@ -339,10 +319,10 @@ class TestMorphology(TestCase):
             ("cr", "y"),
             ("cr", "ied"),
         }
-        self.assertEqual(self.morphology.suffixal_parses, expected_parses)
+        self.assertEqual(self.morphology.suffixal_bigrams, expected_bigrams)
 
-    def test_prefixal_parses(self):
-        expected_parses = {
+    def test_prefixal_bigrams(self):
+        expected_bigrams = {
             ("un", "do"),
             ("re", "do"),
             ("un", "wind"),
@@ -352,7 +332,7 @@ class TestMorphology(TestCase):
             (morphology.NULL_AFFIX, "create"),
             ("re", "create"),
         }
-        self.assertEqual(self.morphology.prefixal_parses, expected_parses)
+        self.assertEqual(self.morphology.prefixal_bigrams, expected_bigrams)
 
     def test_build_suffixal_signatures(self):
         existing_morphology = morphology.Morphology()
@@ -425,8 +405,20 @@ class TestMorphology(TestCase):
             ("cr", "y"),
             ("cr", "ied"),
         }
-        existing_morphology.word_counts = {"dry": 2, "cry": 1,
-                                           "dried": 1, "cried": 1}
+        existing_morphology.lexicon = {
+            "dry": morphology.Word("dry", 2),
+            "cry": morphology.Word("cry", 1),
+            "dried": morphology.Word("dried", 1),
+            "cried": morphology.Word("cried", 1),
+        }
+        existing_morphology.lexicon["dry"].add_to_biography("test", 
+                morphology.Parse(("dr", "y")))
+        existing_morphology.lexicon["cry"].add_to_biography("test", 
+                morphology.Parse(("cr", "y")))
+        existing_morphology.lexicon["dried"].add_to_biography("test", 
+                morphology.Parse(("dr", "ied")))
+        existing_morphology.lexicon["cried"].add_to_biography("test", 
+                morphology.Parse(("cr", "ied")))
         expected_morphology = morphology.Morphology(
             morphology.Signature(
                 stems={"cr": 2, "dr": 3},
@@ -434,4 +426,6 @@ class TestMorphology(TestCase):
             ),
         )
         existing_morphology.build_signatures(parses, min_num_stems=2)
+        print(existing_morphology.serialize_signatures())
+        print(expected_morphology.serialize_signatures())
         self.assertTrue(existing_morphology == expected_morphology)

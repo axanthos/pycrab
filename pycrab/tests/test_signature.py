@@ -88,8 +88,8 @@ class TestSignature(TestCase):
         affix_string = "NULL=es".replace("=", morphology.AFFIX_DELIMITER)
         self.assertTrue(not self.signature.contains(affix_string))
 
-    def test_suffixal_parses(self):
-        expected_parses = {
+    def test_suffixal_bigrams(self):
+        expected_bigrams = {
             ("want", morphology.NULL_AFFIX),
             ("want", "ed"),
             ("want", "ing"),
@@ -97,21 +97,21 @@ class TestSignature(TestCase):
             ("add", "ed"),
             ("add", "ing"),
         }
-        self.assertEqual(self.signature.parses, expected_parses)
+        self.assertEqual(self.signature.bigrams, expected_bigrams)
 
-    def test_prefixal_parses(self):
+    def test_prefixal_bigrams(self):
         signature = morphology.Signature(
             stems=["do", "wind"],
             affixes=["un", "re"],
             affix_side="prefix",
         )
-        expected_parses = {
+        expected_bigrams = {
             ("un", "do"),
             ("re", "do"),
             ("un", "wind"),
             ("re", "wind"),
         }
-        self.assertEqual(signature.parses, expected_parses)
+        self.assertEqual(signature.bigrams, expected_bigrams)
 
     def test_affix_string(self):
         expected = "NULL=ed=ing".replace("=", morphology.AFFIX_DELIMITER)

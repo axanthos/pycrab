@@ -5,9 +5,14 @@
 
 This module provides functionality for command-line usage of pycrab.
 
+Todo:
+    - more sensible defaults (-s and -l)
+    - config file
+
 """
 
 import argparse
+import errno
 from pathlib import Path
 import sys
 
@@ -25,58 +30,27 @@ __status__ = "development"
 def main():
     """Command line usage of pycrab"""
 
+    #parent_parser = argparse.ArgumentParser(add_help=False)
+    #parent_parser.add_argument('--john', PARENT_JOHN, help="User name" )
+
     # Create argument parser and declare arguments...
     parser = argparse.ArgumentParser(
+    	#parents=[parent_parser],
         prog="pycrab",
         description="Unsupervised morphological analysis with the Linguistica "
                     "Crab algorithm.",
     )
     parser.add_argument(
-        "-l", "--lowercase",
-        help="Lowercase input text",
-        action="store_true" if pycrab.morphology.LOWERCASE_INPUT
-                            else "store_false"
-    )
-    parser.add_argument(
-        "-p", "--prefix",
-        help="Learn prefixal (instead of suffixal) morphology",
-        action="store_true",
-    )
-    parser.add_argument(
-        "-i", "--input",
-        help="Path to the text file containing the data to analyze",
-        required=True,
+        "-c", "--case_sensitive",
+        help="Take case differences into account "
+             "(rather than lowercasing input text)",
+        action="store_true"
     )
     parser.add_argument(
         "-e", "--encoding",
         help="Input file encoding (default: %s)" %
              pycrab.morphology.INPUT_ENCODING,
         default=pycrab.morphology.INPUT_ENCODING,
-    )
-    parser.add_argument(
-        "-o", "--output",
-        help="Base filename (without suffix) for output files "
-             "(default: print to screen)",
-    )
-    parser.add_argument(
-        "-t", "--token",
-        help="A regular expression to be used for tokenizing input data "
-             "(default: '%s')" % pycrab.morphology.TOKENIZATION_REGEX,
-        default=pycrab.morphology.TOKENIZATION_REGEX,
-    )
-    parser.add_argument(
-        "-s", "--min_stem_length",
-        help="The minimum number of characters in a stem (default: %i)" %
-             pycrab.morphology.MIN_STEM_LEN,
-        default=pycrab.morphology.MIN_STEM_LEN,
-        type=int,
-    )
-    parser.add_argument(
-        "-n", "--min_num_stems",
-        help="The minimum number of stems for creating a signature "
-             "(default: %i)" % pycrab.morphology.MIN_NUM_STEMS,
-        default=pycrab.morphology.MIN_NUM_STEMS,
-        type=int,
     )
     parser.add_argument(
         "-f", "--num_seed_families",
@@ -86,6 +60,28 @@ def main():
         type=int,
     )
     parser.add_argument(
+        "-i", "--input",
+        help="Path to the text file containing the data to analyze",
+        required=True,
+    )
+    parser.add_argument(
+        "-n", "--min_num_stems",
+        help="The minimum number of stems for creating a signature "
+             "(default: %i)" % pycrab.morphology.MIN_NUM_STEMS,
+        default=pycrab.morphology.MIN_NUM_STEMS,
+        type=int,
+    )
+    parser.add_argument(
+        "-o", "--output",
+        help="Path to the folder where output files will be created "
+             "(default: print to screen)",
+    )
+    parser.add_argument(
+        "-p", "--prefix",
+        help="Learn prefixal (instead of suffixal) morphology",
+        action="store_true",
+    )
+    parser.add_argument(
         "-r", "--min_robustness",
         help="minimal robustness required for a signature to be considered "
              "for inclusion in a family (default: %i)" %
@@ -93,6 +89,25 @@ def main():
         default=pycrab.morphology.MIN_ROBUSTNESS_FOR_FAMILY_INCLUSION,
         type=int,
     )
+    parser.add_argument(
+        "-s", "--min_stem_length",
+        help="The minimum number of characters in a stem (default: %i)" %
+             pycrab.morphology.MIN_STEM_LEN,
+        default=pycrab.morphology.MIN_STEM_LEN,
+        type=int,
+    )
+    parser.add_argument(
+        "-t", "--token",
+        help="A regular expression to be used for tokenizing input data "
+             "(default: '%s')" % pycrab.morphology.TOKENIZATION_REGEX,
+        default=pycrab.morphology.TOKENIZATION_REGEX,
+    )
+
+    
+   # if  parent_parser.parse_args().john:
+    #	parser.parse_args.input = "browncorpus.dx1"
+   # 	parser.parse_args.min_stem_length = 3
+   # 	parser.parse_args.output = "browncorpus"
 
     # Parse and process args.
     args = parser.parse_args()
@@ -103,7 +118,7 @@ def main():
             input_file_path=args.input,
             encoding=args.encoding,
             tokenization_regex=args.token,
-            lowercase_input=args.lowercase,
+            lowercase_input=not args.case_sensitive,
             min_stem_len=args.min_stem_length,
             min_num_stems=args.min_num_stems,
             num_seed_families=args.num_seed_families,
@@ -120,18 +135,33 @@ def main():
             "stems_and_words": morphology.serialize_stems_and_words(affix_side),
             "protostems": morphology.serialize_protostems(affix_side),
             "word_biographies": morphology.serialize_word_biographies(affix_side),
+            "scratchpad": morphology.serialize_scratchpads()
         }
 
         if args.output:
-            base_path = Path(args.input).parent / args.output
+            output_path = Path(args.output)
+            try:
+                output_path.mkdir()
+            except OSError as e:
+                if e.errno == errno.EEXIST:
+                    overwrite = None
+                    while overwrite != "y" and overwrite != "n":
+                        overwrite = input("Overwrite contents of existing "
+                                          "'%s' folder? [y/n]: " % output_path)
+                    if overwrite == "n":
+                        print("Operation canceled.")
+                        exit()
+                else:
+                    raise
+                
         for filename, result in results.items():
             if args.output:
                 try:
-                    path = "%s_%s.txt" % (base_path, filename)
+                    path = output_path / Path("%s.txt" % filename)
                     sys.stdout = open(path, 'w')
                 except IOError:
                     print("Couldn't open file %s, printing results to screen." %
-                          args.output)
+                          path)
             if not sys.stdout.name.endswith(".txt"):
                 print("#" * 80 + "\n")
             print(result)
