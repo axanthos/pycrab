@@ -846,12 +846,24 @@ class Morphology(object):
                     lines.append("\t\t%s" % word)
 
         return "\n".join(lines)
+
     def serialize_scratchpads(self):
+        """Formats word scratchpads for output.
+
+        Args: None
+
+        Returns:
+            String.
+
+        Todo: test
+
+        """
         output = list()
         for word in sorted(self.lexicon):
-            output.append(self.lexicon[word].form + ":")        
+            output.append(self.lexicon[word].form + ":")
             output.append(self.lexicon[word].serialize_scratchpad())
         return "\n".join(output)
+
     def serialize_protostems(self, affix_side="suffix"):
         """Formats protostems and continuations for display.
 
@@ -922,11 +934,10 @@ class Morphology(object):
             self.prefixal_signatures[signature.affix_string] = signature
         else:
             self.suffixal_signatures[signature.affix_string] = signature
-            for stem in stems:
-                for affix in affixes:
-                    word = stem + affix
-                    if word in self.lexicon:
-                        self.lexicon[word].add_to_scratchpad("&" + signature.display())
+            for bigram in signature.get_bigrams(affix_side):
+                word = "".join(bigram)
+                if word in self.lexicon:
+                    self.lexicon[word].add_to_scratchpad("&"+signature.display())
 
     def build_signatures(self, bigrams, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
@@ -1822,7 +1833,7 @@ class Signature(tuple):
         return set(itertools.product(affixes, stems))
 
     def display(self):
-        return self._compute_affix_string()    
+        return self.affix_string()
 
     def get_edge_entropy(self, num_letters=1):
         """Compute entropy (in bits) over final stem letter sequences.
@@ -1968,7 +1979,7 @@ class Word(object):
             self._suffixal_parses = biography
         #added John Dec 15
         self.get_scratchpad().append(function + "&" + parse.__str__())
-        
+
     def discard_from_biography(self, function, parse, affix_side="suffix"):
         """Discard a parse from the word's biography of a given type.
 
@@ -1980,7 +1991,7 @@ class Word(object):
 
         Todo:
             test
-            
+
         """
 
         biography = self.get_biography(function, affix_side)
@@ -1990,28 +2001,30 @@ class Word(object):
             self._prefixal_parses = biography
         else:
             self._suffixal_parses = biography
+
     def get_scratchpad(self):
         return self._scratchpad
+
     def add_to_scratchpad(self, message):
-        """Add a string to this word's informal record
+        """Add a string to this word's informal record.
 
         Args:
-            string: any text that would be useful to the person looking at the evolution of the analysis.
+            message (string): any text that would be useful to the person 
+                looking at the evolution of the analysis.
         """
         self._scratchpad.append(message)
-    # John Dec 15 2020
+
     def serialize_scratchpad(self):
         width = 22
         tab = 4
         lines = list()
         for line in self._scratchpad:
-            items = line.split("&")   
-            formatted_line = " "*tab
+            items = line.split("&")
+            formatted_line = " " * tab
             for item in items:
-                formatted_line += item + " "*(width - len(item))
+                formatted_line += item + " " * (width - len(item))
             lines.append(formatted_line)
         return "\n".join(lines)
-
 
     @property
     def suffixal_parses(self):
