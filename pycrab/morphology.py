@@ -940,7 +940,7 @@ class Morphology(object):
             self.prefixal_signatures[signature.affix_string] = signature
         else:
             self.suffixal_signatures[signature.affix_string] = signature
-            for bigram in signature.get_bigrams(affix_side):
+            for bigram in signature.bigrams:
                 word = "".join(bigram)
                 if word in self.lexicon:
                     self.lexicon[word].add_to_scratchpad("&"+signature.display())
@@ -1839,7 +1839,7 @@ class Signature(tuple):
         return set(itertools.product(affixes, stems))
 
     def display(self):
-        return self.affix_string()
+        return self.affix_string
 
     def get_edge_entropy(self, num_letters=1):
         """Compute entropy (in bits) over final stem letter sequences.
@@ -1984,7 +1984,7 @@ class Word(object):
         else:
             self._suffixal_parses = biography
         #added John Dec 15
-        self.get_scratchpad().append(function + "&" + parse.__str__())
+        self.get_scratchpad().append(function + "&" + str(parse))
 
     def discard_from_biography(self, function, parse, affix_side="suffix"):
         """Discard a parse from the word's biography of a given type.
