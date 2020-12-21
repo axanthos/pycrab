@@ -17,6 +17,7 @@ from pathlib import Path
 import sys
 
 import pycrab
+import pycrab.graphics 
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -135,7 +136,8 @@ def main():
             "stems_and_words": morphology.serialize_stems_and_words(affix_side),
             "protostems": morphology.serialize_protostems(affix_side),
             "word_biographies": morphology.serialize_word_biographies(affix_side),
-            "scratchpad": morphology.serialize_scratchpads()
+            "scratchpad": morphology.serialize_scratchpads(),
+            "svg-graphics": morphology.produce_svg(affix_side)
         }
 
         if args.output:
