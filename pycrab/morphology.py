@@ -885,6 +885,12 @@ class Morphology(object):
                                                      for c in continuations)))
         return "\n".join(lines)
 
+    def lattice_svg(self, affix_side="suffix"):
+        """
+
+        """
+        
+
     def add_new_index(self, affix, affix_side="suffix"):
         """Returns a name with a new, unique index for a given non-NULL affix.
 

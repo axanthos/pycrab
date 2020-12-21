@@ -135,7 +135,8 @@ def main():
             "stems_and_words": morphology.serialize_stems_and_words(affix_side),
             "protostems": morphology.serialize_protostems(affix_side),
             "word_biographies": morphology.serialize_word_biographies(affix_side),
-            "scratchpad": morphology.serialize_scratchpads()
+            "scratchpad": morphology.serialize_scratchpads(),
+            "lattice":morphology.lattice_svg(affix_side)
         }
 
         if args.output:
@@ -156,14 +157,21 @@ def main():
                 
         for filename, result in results.items():
             if args.output:
-                try:
-                    path = output_path / Path("%s.txt" % filename)
-                    sys.stdout = open(path, 'w')
-                except IOError:
-                    print("Couldn't open file %s, printing results to screen." %
-                          path)
-            if not sys.stdout.name.endswith(".txt"):
-                print("#" * 80 + "\n")
+                if filename.right(3) == "svg":
+                    try:
+                        path = output_path / Path("%s.html" % filename)
+                        sys.stdout = open(path, 'w')
+                    except IOError:
+                        print("Couldn't open file %s" % path) 
+                else:                       
+                    try:
+                        path = output_path / Path("%s.txt" % filename)
+                        sys.stdout = open(path, 'w')
+                    except IOError:
+                        print("Couldn't open file %s, printing results to screen." %
+                              path)
+                if not sys.stdout.name.endswith(".txt"):
+                    print("#" * 80 + "\n")
             print(result)
         sys.stdout = sys.__stdout__
 
