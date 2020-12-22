@@ -136,8 +136,7 @@ def main():
             "stems_and_words": morphology.serialize_stems_and_words(affix_side),
             "protostems": morphology.serialize_protostems(affix_side),
             "word_biographies": morphology.serialize_word_biographies(affix_side),
-            "scratchpad": morphology.serialize_scratchpads(),
-            "svg-graphics": morphology.produce_svg(affix_side)
+            "scratchpad": morphology.serialize_scratchpads()
         }
 
         if args.output:
@@ -172,6 +171,6 @@ def main():
     except IOError:
         print("Couldn't open file", args.input)
 
-
+ 
 if __name__ == "__main__":
     main()

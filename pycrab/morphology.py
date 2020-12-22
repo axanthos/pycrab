@@ -25,7 +25,7 @@ from cached_property import cached_property
 from pycrab.null_affix import NULLAffix
 import pycrab.utils
 from pycrab.utils import ImmutableDict
-import pycrab.graphics
+from  pycrab.graphics import display_signatures_as_svg
 
 
 __author__ = "Aris Xanthos and John Goldsmith"
