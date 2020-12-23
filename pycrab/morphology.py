@@ -942,12 +942,17 @@ class Morphology(object):
         signature = Signature(stems, affixes, affix_side)
         if affix_side == "prefix":
             self.prefixal_signatures[signature.affix_string] = signature
+            affix_side_tag = " [prefixal]"
         else:
             self.suffixal_signatures[signature.affix_string] = signature
-            for bigram in signature.bigrams:
-                word = "".join(bigram)
-                if word in self.lexicon:
-                    self.lexicon[word].add_to_scratchpad("&"+signature.display())
+            affix_side_tag = ""
+
+        # Update scratchpads...
+        for bigram in signature.bigrams:
+            word = "".join(bigram)
+            if word in self.lexicon:
+                self.lexicon[word].add_to_scratchpad("&%s%s" % 
+                    (signature.display(), affix_side_tag))
 
     def build_signatures(self, bigrams, affix_side="suffix",
                          min_num_stems=MIN_NUM_STEMS):
