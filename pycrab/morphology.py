@@ -22,10 +22,10 @@ import itertools
 import re
 
 from cached_property import cached_property
+import pycrab.graphics
 from pycrab.null_affix import NULLAffix
 import pycrab.utils
 from pycrab.utils import ImmutableDict
-from  pycrab.graphics import display_signatures_as_svg
 
 
 __author__ = "Aris Xanthos and John Goldsmith"
@@ -867,11 +867,11 @@ class Morphology(object):
         return "\n".join(output)
 
     def produce_svg(self, affix_side):
-        """
-        Produce html files with graphics of signature lattice using
+        """Produce html files with graphics of signature lattice using
         svg format.
         """
-        return display_signatures_as_svg(self.get_signatures(affix_side))
+        return pycrab.graphics.display_signatures_as_svg(
+                self.get_signatures(affix_side))
 
 
     def serialize_protostems(self, affix_side="suffix"):
