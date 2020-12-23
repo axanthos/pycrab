@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 
 import pycrab
-import pycrab.graphics 
+import pycrab.graphics
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -31,12 +31,8 @@ __status__ = "development"
 def main():
     """Command line usage of pycrab"""
 
-    #parent_parser = argparse.ArgumentParser(add_help=False)
-    #parent_parser.add_argument('--john', PARENT_JOHN, help="User name" )
-
     # Create argument parser and declare arguments...
     parser = argparse.ArgumentParser(
-    	#parents=[parent_parser],
         prog="pycrab",
         description="Unsupervised morphological analysis with the Linguistica "
                     "Crab algorithm.",
@@ -104,12 +100,6 @@ def main():
         default=pycrab.morphology.TOKENIZATION_REGEX,
     )
 
-    
-   # if  parent_parser.parse_args().john:
-    #	parser.parse_args.input = "browncorpus.dx1"
-   # 	parser.parse_args.min_stem_length = 3
-   # 	parser.parse_args.output = "browncorpus"
-
     # Parse and process args.
     args = parser.parse_args()
     affix_side = "prefix" if args.prefix else "suffix"
@@ -154,7 +144,7 @@ def main():
                         exit()
                 else:
                     raise
-                
+
         for filename, result in results.items():
             if args.output:
                 try:
@@ -171,6 +161,6 @@ def main():
     except IOError:
         print("Couldn't open file", args.input)
 
- 
+
 if __name__ == "__main__":
     main()
