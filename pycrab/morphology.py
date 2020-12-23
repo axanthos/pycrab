@@ -870,9 +870,9 @@ class Morphology(object):
         """Produce html files with graphics of signature lattice using
         svg format.
         """
-        return pycrab.graphics.display_signatures_as_svg(
-                self.get_signatures(affix_side))
-
+        lines = [l or "" for l in pycrab.graphics.display_signatures_as_svg(
+                 self.get_signatures(affix_side))]
+        return "\n".join(lines)
 
     def serialize_protostems(self, affix_side="suffix"):
         """Formats protostems and continuations for display.
@@ -2019,7 +2019,7 @@ class Word(object):
         """Add a string to this word's informal record.
 
         Args:
-            message (string): any text that would be useful to the person 
+            message (string): any text that would be useful to the person
                 looking at the evolution of the analysis.
         """
         self._scratchpad.append(message)

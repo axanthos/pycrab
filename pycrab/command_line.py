@@ -117,7 +117,7 @@ def main():
             affix_side=affix_side,
         )
 
-        results = {
+        text_results = {
             "morphology_overview": morphology.serialize(affix_side),
             "families": morphology.serialize_families(affix_side),
             "signatures_robustness": morphology.serialize_signatures(affix_side),
@@ -127,6 +127,15 @@ def main():
             "protostems": morphology.serialize_protostems(affix_side),
             "word_biographies": morphology.serialize_word_biographies(affix_side),
             "scratchpad": morphology.serialize_scratchpads()
+        }
+        
+        html_results = {
+            "svg-graphics": morphology.produce_svg(affix_side),
+        }
+        
+        extension_to_result_dict = {
+            "txt": text_results,
+            "html": html_results,
         }
 
         if args.output:
@@ -145,18 +154,20 @@ def main():
                 else:
                     raise
 
-        for filename, result in results.items():
-            if args.output:
-                try:
-                    path = output_path / Path("%s.txt" % filename)
-                    sys.stdout = open(path, 'w')
-                except IOError:
-                    print("Couldn't open file %s, printing results to screen." %
-                          path)
-            if not sys.stdout.name.endswith(".txt"):
-                print("#" * 80 + "\n")
-            print(result)
-        sys.stdout = sys.__stdout__
+        for extension, result_dict in extension_to_result_dict.items():
+            for filename, result in result_dict.items():
+                if args.output:
+                    try:
+                        path = output_path / Path("%s.%s" % (filename, 
+                                                             extension))
+                        sys.stdout = open(path, 'w')
+                    except IOError:
+                        print("Couldn't open file %s, printing results "    \
+                              "to screen." % path)
+                if not sys.stdout.name.endswith(".%s" % extension):
+                    print("#" * 80 + "\n")
+                print(result)
+            sys.stdout = sys.__stdout__
 
     except IOError:
         print("Couldn't open file", args.input)
