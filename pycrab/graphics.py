@@ -44,25 +44,23 @@ def add_an_html_header_entry(outlist,item):
 def stemcount(sig):
     return len(sig.stems)
 
-def display_signatures_as_svg (signature_list):    
+def display_signatures_as_svg(signature_list):    
     this_page = Page()
     outlist = list()
-    signature_list = sorted(signature_list, key=stemcount, reverse=True)
+    signature_list = sorted(signature_list, key=lambda s: len(s.stems), 
+                            reverse=True)
     this_page.start_an_html_file(outlist)
     column_counts = dict();
-    for signo in range(len(signature_list)):
-            this_sig = signature_list[signo]
-            sigstring = this_sig.affix_string
-            stem_count = len(this_sig.stems)
-            robustness = this_sig.robustness
-            row_no= this_sig.count("=")+1
-            if row_no not in column_counts:
-                column_counts[row_no] = 1
-            else:
-                column_counts[row_no] += 1
-            col_no = column_counts[row_no]
-            radius_guide = stem_count * row_no
-            outlist.append(this_page.print_signature (outlist, sigstring,   row_no, col_no, stem_count))
+    for sig in signature_list:
+        stem_count = len(sig.stems)
+        row_no = len(sig.affixes)
+        try:
+            column_counts[row_no] += 1
+        except KeyError:
+            column_counts[row_no] = 1
+        col_no = column_counts[row_no]
+        radius_guide = stem_count * row_no
+        outlist.append(this_page.print_signature(outlist, sig.affix_string,                                         row_no, col_no, stem_count))
     this_page.end_an_svg_file(outlist)
     end_an_html_file(outlist)
     return outlist
