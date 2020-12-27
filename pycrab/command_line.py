@@ -17,6 +17,7 @@ from pathlib import Path
 import sys
 
 import pycrab
+import pycrab.graphics
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -30,12 +31,8 @@ __status__ = "development"
 def main():
     """Command line usage of pycrab"""
 
-    #parent_parser = argparse.ArgumentParser(add_help=False)
-    #parent_parser.add_argument('--john', PARENT_JOHN, help="User name" )
-
     # Create argument parser and declare arguments...
     parser = argparse.ArgumentParser(
-    	#parents=[parent_parser],
         prog="pycrab",
         description="Unsupervised morphological analysis with the Linguistica "
                     "Crab algorithm.",
@@ -103,12 +100,6 @@ def main():
         default=pycrab.morphology.TOKENIZATION_REGEX,
     )
 
-    
-   # if  parent_parser.parse_args().john:
-    #	parser.parse_args.input = "browncorpus.dx1"
-   # 	parser.parse_args.min_stem_length = 3
-   # 	parser.parse_args.output = "browncorpus"
-
     # Parse and process args.
     args = parser.parse_args()
     affix_side = "prefix" if args.prefix else "suffix"
@@ -126,7 +117,7 @@ def main():
             affix_side=affix_side,
         )
 
-        results = {
+        text_results = {
             "morphology_overview": morphology.serialize(affix_side),
             "families": morphology.serialize_families(affix_side),
             "signatures_robustness": morphology.serialize_signatures(affix_side),
@@ -136,6 +127,15 @@ def main():
             "protostems": morphology.serialize_protostems(affix_side),
             "word_biographies": morphology.serialize_word_biographies(affix_side),
             "scratchpad": morphology.serialize_scratchpads()
+        }
+        
+        html_results = {
+            "svg-graphics": morphology.produce_svg(affix_side),
+        }
+        
+        extension_to_result_dict = {
+            "txt": text_results,
+            "html": html_results,
         }
 
         if args.output:
@@ -153,19 +153,21 @@ def main():
                         exit()
                 else:
                     raise
-                
-        for filename, result in results.items():
-            if args.output:
-                try:
-                    path = output_path / Path("%s.txt" % filename)
-                    sys.stdout = open(path, 'w')
-                except IOError:
-                    print("Couldn't open file %s, printing results to screen." %
-                          path)
-            if not sys.stdout.name.endswith(".txt"):
-                print("#" * 80 + "\n")
-            print(result)
-        sys.stdout = sys.__stdout__
+
+        for extension, result_dict in extension_to_result_dict.items():
+            for filename, result in result_dict.items():
+                if args.output:
+                    try:
+                        path = output_path / Path("%s.%s" % (filename, 
+                                                             extension))
+                        sys.stdout = open(path, 'w')
+                    except IOError:
+                        print("Couldn't open file %s, printing results "    \
+                              "to screen." % path)
+                if not sys.stdout.name.endswith(".%s" % extension):
+                    print("#" * 80 + "\n")
+                print(result)
+            sys.stdout = sys.__stdout__
 
     except IOError:
         print("Couldn't open file", args.input)
