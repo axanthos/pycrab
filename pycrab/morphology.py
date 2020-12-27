@@ -22,9 +22,11 @@ import itertools
 import re
 
 from cached_property import cached_property
+import pycrab.graphics
 from pycrab.null_affix import NULLAffix
 import pycrab.utils
 from pycrab.utils import ImmutableDict
+
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -864,6 +866,14 @@ class Morphology(object):
             output.append(self.lexicon[word].serialize_scratchpad())
         return "\n".join(output)
 
+    def produce_svg(self, affix_side):
+        """Produce html files with graphics of signature lattice using
+        svg format.
+        """
+        lines = [l or "" for l in pycrab.graphics.import_to_page_then_display_signatures_as_svg(
+                 self.get_signatures(affix_side))]
+        return "\n".join(lines)
+
     def serialize_protostems(self, affix_side="suffix"):
         """Formats protostems and continuations for display.
 
@@ -1237,8 +1247,11 @@ class Morphology(object):
                     biparse_to_stems[key].add(short_stem)
 
                     # TODO: store for later output
-                    print("%s\t"*5 % (diff, short_stem, short_stem_sig_string,
-                                      long_stem, long_stem_sig_string))
+                    if word in self.lexicon:
+                        #self.lexicon[word].get_scratchpad().append("Split affixes (!)")
+                        self.lexicon[word].get_scratchpad().append("Split affixes " + "\t%s\t"*5 % (diff, short_stem, short_stem_sig_string, long_stem, long_stem_sig_string))
+
+
 
         # Get current state of bigrams...
         bigrams = self.get_bigrams(affix_side)
@@ -1269,7 +1282,7 @@ class Morphology(object):
                     return my_tuple
 
             # Update bigrams and parses...
-            print(biparse, short_stems)
+            print("line 1285",biparse, short_stems)
             for stem in short_stems:
                 new_bigram = switch_if_needed((stem, indexed_diff), affix_side)
                 bigrams.add(new_bigram)
@@ -1690,6 +1703,11 @@ class Signature(tuple):
 
         return "\n".join(lines)
 
+    def stem_count(self):
+        return len(self.stems)
+    def affix_count(self):
+        return len(self.affixes)
+
     def contains(self, affix_string):
         """Indicates if all the affixes of another signature are in this one.
 
@@ -2009,7 +2027,7 @@ class Word(object):
         """Add a string to this word's informal record.
 
         Args:
-            message (string): any text that would be useful to the person 
+            message (string): any text that would be useful to the person
                 looking at the evolution of the analysis.
         """
         self._scratchpad.append(message)
