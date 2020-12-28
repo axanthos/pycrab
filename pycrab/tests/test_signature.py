@@ -120,6 +120,9 @@ class TestSignature(TestCase):
     def test_example_stem(self):
         self.assertEqual(self.signature.example_stem, "add")
 
+    def test_stem_count(self):
+        self.assertEqual(self.signature.stem_count, 2)
+
     def test_str(self):
         signature = morphology.Signature(["want", "want", "add"],
                                          ["ing", "ed", morphology.NULL_AFFIX])

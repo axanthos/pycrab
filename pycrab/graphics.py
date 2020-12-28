@@ -87,7 +87,7 @@ class Page:
     def import_signatures_to_page (self,signature_list):    
         outlist = list()
         #print (84, len(signature_list))
-        signature_list.sort(key=lambda sig:sig.stem_count(), reverse=True) # was: key = stemcount
+        signature_list.sort(key=lambda sig:sig.stem_count, reverse=True) # was: key = stemcount
         for sig in signature_list:
                 #print (87, sig.affix_string)
                 row_no= sig.affix_count()
@@ -112,9 +112,8 @@ class Page:
             for col_no in range(len(self.row[row_no])):
                 this_sig = self.row[row_no][col_no]
                 sigstring = this_sig.affix_string
-                stem_count = len(this_sig.stems)
                 robustness = this_sig.robustness
-                outlist.append(self.print_signature (outlist, sigstring, row_no, col_no, stem_count))
+                outlist.append(self.print_signature (outlist, sigstring, row_no, col_no, this_sig.stem_count))
                 #print (114, "Row: ", row_no, "\nCol number:", col_no, sigstring,)                
         self.end_an_svg_file(outlist)
         end_an_html_file(outlist)

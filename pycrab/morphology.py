@@ -1709,8 +1709,34 @@ class Signature(tuple):
 
         return "\n".join(lines)
 
+    @cached_property
     def stem_count(self):
+        """Returns the number of different stems in this signature.
+
+        Args: None.
+
+        Returns:
+            int.
+
+        Todo:
+            test
+            
+        """
+
+        return self._compute_stem_count()
+        
+    def _compute_stem_count(self):
+        """Returns the number of different stems in this signature.
+
+        Args: None.
+
+        Returns:
+            int.
+
+        """
+
         return len(self.stems)
+        
     def affix_count(self):
         return len(self.affixes)
 
