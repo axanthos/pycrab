@@ -139,4 +139,4 @@ class TestSignature(TestCase):
             "Number of stems: 2\n"
             % signature.affix_string
         )
-        self.assertEqual(str(signature), expected_str)
+        self.assertEqual(signature.serialize(), expected_str)

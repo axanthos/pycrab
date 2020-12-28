@@ -364,7 +364,7 @@ class Morphology(object):
     def remove_signature(self, affix_string, affix_side="suffix"):
         """Removes a signature from the morphology.
 
-            affix_string (str):
+            affix_string (string):
                 the affix string if the signature to remove.
             affix_side (string, optional): either "suffix" (default) or
                 "prefix".
@@ -750,7 +750,7 @@ class Morphology(object):
         else:
             signatures.sort(key=lambda signature: signature.robustness,
                              reverse=True)
-        return "\n".join(str(signature) for signature in signatures)
+        return "\n".join(signature.serialize() for signature in signatures)
 
     def serialize_families(self, affix_side="suffix"):
         """Formats the families for detailed display.
@@ -1652,8 +1652,14 @@ class Signature(tuple):
         """Hashing function for signature objects."""
         return hash(tuple(sorted(self.affixes)))
 
-    def __str__(self):
-        """Formats the signature for display."""
+    def serialize(self):
+        """Formats the signature for display.
+
+        Args: none
+
+        Returns: nothing
+
+        """
 
         lines = list()
 
@@ -1995,7 +2001,6 @@ class Word(object):
             self._prefixal_parses = biography
         else:
             self._suffixal_parses = biography
-        #added John Dec 15
         self.get_scratchpad().append(function + "&" + str(parse))
 
     def discard_from_biography(self, function, parse, affix_side="suffix"):
