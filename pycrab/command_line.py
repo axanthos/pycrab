@@ -183,18 +183,22 @@ def main():
 
         for extension, result_dict in extension_to_result_dict.items():
             for filename, result in result_dict.items():
+                print_to_screen = False
                 if args.output:
                     try:
                         path = output_path / Path("%s.%s" % (filename, 
                                                              extension))
-                        sys.stdout = open(path, 'w')
+                        with open(path, 'w') as output_file:
+                            output_file.write(result)
                     except IOError:
-                        print("Couldn't open file %s, printing results "    \
-                              "to screen." % path)
-                if not sys.stdout.name.endswith(".%s" % extension):
+                        print("Couldn't open file %s." % path)
+                        print_to_screen = True
+                else:
+                    print_to_screen = True
+                if print_to_screen and extension == "txt":
+                    print("printing results to screen.")
                     print("#" * 80 + "\n")
-                print(result)
-            sys.stdout = sys.__stdout__
+                    print(result)
 
     except IOError:
         print("Couldn't open file", args.input)
