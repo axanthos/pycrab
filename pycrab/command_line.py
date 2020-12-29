@@ -5,13 +5,10 @@
 
 This module provides functionality for command-line usage of pycrab.
 
-Todo:
-    - more sensible defaults (-s and -l)
-    - config file
-
 """
 
 import argparse
+import configparser
 import errno
 from pathlib import Path
 import sys
@@ -38,6 +35,13 @@ def main():
                     "Crab algorithm.",
     )
     parser.add_argument(
+        "-a", "--num_seed_families",
+        help="The number of seed families to create "
+             "(default: %i)" % pycrab.morphology.NUM_SEED_FAMILIES,
+        default=pycrab.morphology.NUM_SEED_FAMILIES,
+        type=int,
+    )
+    parser.add_argument(
         "-c", "--case_sensitive",
         help="Take case differences into account "
              "(rather than lowercasing input text)",
@@ -50,16 +54,13 @@ def main():
         default=pycrab.morphology.INPUT_ENCODING,
     )
     parser.add_argument(
-        "-f", "--num_seed_families",
-        help="The number of seed families to create "
-             "(default: %i)" % pycrab.morphology.NUM_SEED_FAMILIES,
-        default=pycrab.morphology.NUM_SEED_FAMILIES,
-        type=int,
+        "-f", "--config_file",
+        help="Path to a .ini file containing configuration instructions",
     )
     parser.add_argument(
         "-i", "--input",
         help="Path to the text file containing the data to analyze",
-        required=True,
+        default=None,
     )
     parser.add_argument(
         "-n", "--min_num_stems",
@@ -99,9 +100,34 @@ def main():
              "(default: '%s')" % pycrab.morphology.TOKENIZATION_REGEX,
         default=pycrab.morphology.TOKENIZATION_REGEX,
     )
+    parser.add_argument(
+        "-w", "--overwrite",
+        help="Overwrite contents of existing output folder (if any) "
+             "without asking",
+        action="store_true",
+    )
 
-    # Parse and process args.
+    # Parse args.
     args = parser.parse_args()
+    
+    # If a config file has been provided, read it to get args that are not
+    # specified in the command line (command line args have priority)...
+    if args.config_file:
+        config_file_path = Path(args.config_file)
+        config = configparser.ConfigParser()
+        config.read(config_file_path)
+        for key in config["PYCRAB_CONFIG"]:  
+            if not getattr(args, key):
+                setattr(args, key, config["PYCRAB_CONFIG"][key])
+                
+    # Exit with error message if no input file was specified...
+    if not args.input:
+        parser.print_usage()
+        print("pycrab: error: an input file must be specified either in the "
+              "command line args (-i/--input) or in a config file (input)")
+        exit()
+        
+    # Process args...
     affix_side = "prefix" if args.prefix else "suffix"
     morphology = pycrab.Morphology()
     try:
@@ -144,13 +170,14 @@ def main():
                 output_path.mkdir()
             except OSError as e:
                 if e.errno == errno.EEXIST:
-                    overwrite = None
-                    while overwrite != "y" and overwrite != "n":
-                        overwrite = input("Overwrite contents of existing "
-                                          "'%s' folder? [y/n]: " % output_path)
-                    if overwrite == "n":
-                        print("Operation canceled.")
-                        exit()
+                    if not args.overwrite:
+                        overwrite = None
+                        while overwrite != "y" and overwrite != "n":
+                            overwrite = input("Overwrite contents of "
+                                              "existing '%s' folder? [y/n]: " % output_path)
+                        if overwrite == "n":
+                            print("Operation canceled.")
+                            exit()
                 else:
                     raise
 
