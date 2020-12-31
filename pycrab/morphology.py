@@ -27,6 +27,8 @@ from pycrab.null_affix import NULLAffix
 import pycrab.utils
 from pycrab.utils import ImmutableDict
 
+import pycrab.lxalatex 
+from pycrab.lxalatex import signatures_to_latex 
 
 __author__ = "Aris Xanthos and John Goldsmith"
 __copyright__ = "Copyright 2020, Aris Xanthos & John Golsdmith"
@@ -61,7 +63,7 @@ AFFIX_MARKER = ":"
 """Module-level constant for the symbol that marks affixes when needed."""
 
 TOKENIZATION_REGEX = r"\w+(?u)"
-"""Module-level constant for the regex pattern used to tokenize text."""
+"""Module-level constant for the regex patlltern used to tokenize text."""
 
 LOWERCASE_INPUT = True
 """Module-level constant indicating wether input words should be lowercased."""
@@ -873,6 +875,11 @@ class Morphology(object):
         lines = [l or "" for l in pycrab.graphics.import_to_page_then_display_signatures_as_svg(
                  self.get_signatures(affix_side))]
         return "\n".join(lines)
+
+    def signatures_to_latex(self,affix_side):
+        """Produce latex files with tables of signatures.
+        """
+        return "\n".join(signatures_to_latex(self.get_signatures(affix_side)))
 
     def serialize_protostems(self, affix_side="suffix"):
         """Formats protostems and continuations for display.

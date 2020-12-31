@@ -132,10 +132,13 @@ def main():
         html_results = {
             "svg-graphics": morphology.produce_svg(affix_side),
         }
-        
+        latex_results = {
+            "signatures_latex": morphology.signatures_to_latex(affix_side),
+        }
         extension_to_result_dict = {
             "txt": text_results,
             "html": html_results,
+            "tex": latex_results
         }
 
         if args.output:
