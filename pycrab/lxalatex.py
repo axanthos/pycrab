@@ -144,7 +144,7 @@ def signatures_to_latex(signatures):
         rob_prop = float(sig.robustness) / total_robustness
         running_sum_proportion = running_sum / total_robustness
         string1 =  str(count) + ": " +  sig_string + " "*(colwidth-sig_length) + "&"  
-        string2 =  str(stem_count()) + "&" +  str( sig.robustness) + "&"
+        string2 =  str(stem_count) + "&" +  str( sig.robustness) + "&"
         string3 =  "{0:2.3f}".format(rob_prop) + "\\\\"
         outlist.append( string1  +  string2 + string3)
         count += 1
