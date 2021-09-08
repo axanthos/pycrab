@@ -1167,6 +1167,63 @@ class Morphology(object):
         # Update signatures to reflect bigrams.
         self.build_signatures(bigrams, affix_side)
 
+    def find_good_signatures_inside_bad(self, affix_side="suffix"):
+        """TODO: Synopsis
+
+        Args:
+            affix_side (string, optional): either "suffix" (default) or
+                "prefix".
+
+        Returns: nothing.
+
+        Todo: test.
+
+        """
+
+        # Get current bigrams and protostems.
+        bigrams = self.get_bigrams(affix_side)
+        protostems = self.get_protostems(affix_side)
+
+        # Sort signatures by robustness...
+        signatures = self.get_signatures(affix_side)
+        signatures.sort(key=lambda s: s.robustness, reverse=True)
+
+        # For all unanalyzed protostems...
+        for protostem, continuations in protostems.items():
+
+            # Initialize best signature affixes to empty set...
+            best_sig_affixes = set()
+            
+            # For each signature...
+            for idx, signature in enumerate(signatures):
+                affixes = set(signature.affixes)
+
+                # If the protostem's continuations contain this signature...
+                if affixes.issubset(continuations):
+                
+                    # If this signature contains the best one found so far...
+                    if best_sig_affixes.issubset(affixes):
+                
+                        # Then this signature is the best one found so far...
+                        best_sig_affixes = affixes                    
+
+            # If best signature is not empty, create new bigrams and remove them 
+            # from unanalyzed stuff...
+            for affix in best_sig_affixes:
+                bigrams.add((affix, protostem) if affix_side == "prefix"
+                           else (protostem, affix))
+                protostems[protostem].remove(affix)
+
+        # Update biography of analyzed words and mark analysis as run...
+        func = inspect.currentframe().f_code.co_name
+        for bigram in bigrams:
+            word = "".join(bigram)
+            self.lexicon[word].add_to_biography(func, Parse(bigram), affix_side)
+        self.get_analyses_list(affix_side).append(func)
+
+        # Update signatures to reflect bigrams.
+        self.build_signatures(bigrams, affix_side)
+
     def split_affixes(self, affix_side="suffix"):
         """Split affixes based on the observation of multiply analyzed words.
 
@@ -1289,11 +1346,11 @@ class Morphology(object):
                     return my_tuple
 
             # Update bigrams and parses...
-            print("line 1285",biparse, short_stems)
+            # print("line 1349", biparse, short_stems)
             for stem in short_stems:
                 new_bigram = switch_if_needed((stem, indexed_diff), affix_side)
                 bigrams.add(new_bigram)
-                print("1: added bigram", new_bigram)
+                # print("1: added bigram", new_bigram)
                 for affix in short_stem_sig_object.affixes:
                     if affix.startswith(diff):
                         old_bigram = switch_if_needed((stem, affix), affix_side)
@@ -1301,11 +1358,11 @@ class Morphology(object):
                         bigrams.discard(old_bigram)
                         self.lexicon[word].discard_from_biography(
                                 func, Parse(old_bigram), affix_side)
-                        print("2: discarded bigram and parse", old_bigram)
+                        # print("2: discarded bigram and parse", old_bigram)
             for affix in long_stem_sig_object.affixes:
                 new_bigram = switch_if_needed((indexed_diff, affix), affix_side)
                 bigrams.add(new_bigram)
-                print("3: added bigram", new_bigram)
+                # print("3: added bigram", new_bigram)
                 for stem in short_stems:
                     new_stem = stem+diff if affix_side == "suffix" else diff+stem
                     old_bigram = switch_if_needed((new_stem, affix), affix_side)
@@ -1313,12 +1370,12 @@ class Morphology(object):
                     word = "".join(old_bigram)
                     self.lexicon[word].discard_from_biography(
                             func, Parse(old_bigram), affix_side)
-                    print("4: discarded bigram and parse", old_bigram)
+                    # print("4: discarded bigram and parse", old_bigram)
                     new_parse = Parse(switch_if_needed((stem, indexed_diff,
                                                         affix), affix_side))
                     self.lexicon[word].add_to_biography(func, new_parse,
                                                         affix_side)
-                    print("5: added parse", new_parse.morphemes)
+                    # print("5: added parse", new_parse.morphemes)
 
         # Create signatures based on stored bigrams.
         self.build_signatures(bigrams, affix_side, min_num_stems=1)
@@ -1433,7 +1490,10 @@ class Morphology(object):
         self.find_signatures1(min_stem_len, min_num_stems, affix_side="prefix")
 
         # Widen signatures.
-        self.widen_signatures(affix_side)
+        # self.widen_signatures(affix_side)
+
+        # Find good signatures inside bad.
+        self.find_good_signatures_inside_bad(affix_side)
 
         # Split affixes.
         self.split_affixes(affix_side)
@@ -2071,7 +2131,7 @@ class Word(object):
         self._scratchpad.append(message)
 
     def serialize_scratchpad(self):
-        width = 22
+        width = 32
         tab = 4
         lines = list()
         for line in self._scratchpad:
