@@ -497,8 +497,8 @@ class Morphology(object):
         return self.get_bigrams(affix_side="prefix")
 
     def get_bigrams(self, affix_side="suffix", stripped=False):
-        """Construct a set of morpheme bigrams based on all signatures of a
-        given type.
+        """Construct a set of morpheme bigrams from all signatures of a given 
+        type by taking the cartesian product of stems + affixes.
 
         bigrams are pairs (prefix, stem) or (stem, suffix), depending on
         affix_side arg.
@@ -520,7 +520,7 @@ class Morphology(object):
                 bigrams.update(signature.stripped_bigrams)
         else:
             for signature in self.get_signatures(affix_side):
-                bigrams.update(signature.stripped_bigrams)
+                bigrams.update(signature.bigrams)
         return bigrams
 
     def get_analyses_list(self, affix_side="suffix"):
